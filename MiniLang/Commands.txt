@@ -1,0 +1,151 @@
+MINI COMPILER - COMMAND NOTES (week 03)
+=======================================
+
+Run everything from the project folder, in PowerShell:
+    cd C:\Users\alex\IPL\MiniLang\week03-start
+
+PowerShell needs no PATH setup (C:\msys64\ucrt64\bin is already first in
+the system PATH). Only in Git Bash, run this first:
+    export PATH="/c/msys64/ucrt64/bin:$PATH"
+
+
+1. BUILD
+--------
+Rebuild only after changing a .cpp or .hpp file (editing a .mini file
+does not need a rebuild):
+    cmake --build build
+
+build/ is CMake's output folder. It holds:
+    CMakeCache.txt, Makefile, CMakeFiles/  - CMake's build notes
+    libmini_compiler.a                     - the compiler code as a library
+    minic.exe                              - the compiler itself
+
+First-time setup only (if build/ does not exist):
+    cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug
+
+
+2. MINIC COMMANDS
+-----------------
+Pattern:   .\build\minic.exe <command> <file.mini>
+
+Each command runs the compiler up to one stage and shows the result:
+
+    tokens   lexer (lexer.cpp)      list of tokens
+    ast      parser (parser.cpp)    the syntax tree
+    lower    lowering (lower.cpp)   same tree (does nothing this week)
+    check    resolver               nothing if OK (exit 0), or an error
+    cpp      codegen (codegen.cpp)  the generated C++ source text
+    build    g++                    makes an .exe but does not run it
+    run      g++ + run              the program's actual output
+
+Keep a copy of the generated output:
+    .\build\minic.exe cpp   w03\w03_hello.mini -o build\hello.cpp
+    .\build\minic.exe build w03\w03_hello.mini -o build\hello
+    .\build\hello.exe
+
+Exit codes:
+    0   success
+    1   compiler error - the label says which phase failed
+        (lex / parse / resolve / codegen / backend / runtime)
+    2   wrong command or arguments
+    70  internal crash
+
+
+3. RUNNING THE w03 EXAMPLES
+---------------------------
+hello - a full program, every command works:
+    .\build\minic.exe tokens w03\w03_hello.mini
+    .\build\minic.exe ast    w03\w03_hello.mini
+    .\build\minic.exe lower  w03\w03_hello.mini
+    .\build\minic.exe check  w03\w03_hello.mini
+    .\build\minic.exe cpp    w03\w03_hello.mini
+    .\build\minic.exe run    w03\w03_hello.mini      -> prints 42 / Mini
+
+number - just a fragment, use tokens only:
+    .\build\minic.exe tokens w03\w03_number.mini     -> NUMBER 1:1 "123" = 123
+
+operator - tokens works, check fails ON PURPOSE (no addition yet):
+    .\build\minic.exe tokens w03\w03_operator.mini
+    .\build\minic.exe check  w03\w03_operator.mini
+        -> parse: expected ';' after print value
+
+
+4. RUNNING THE OFFICIAL inputs/ (PowerShell loops)
+--------------------------------------------------
+Never edit the files in inputs/ - the checker detects any change.
+Put your own experiments in w03\ instead.
+
+    # baseline
+    .\build\minic.exe tokens inputs\starting_point.mini
+
+    # acceptance program, every command
+    foreach ($c in "tokens","ast","lower","check","cpp","run") { "--- $c"; .\build\minic.exe $c inputs\acceptance.mini; "[exit $LASTEXITCODE]" }
+
+    # edge cases
+    foreach ($f in "edge_keywords","edge_eof","edge_delimiter","edge_digit_prefix","edge_unsupported_addition") { "--- $f"; .\build\minic.exe tokens inputs\$f.mini; "[exit $LASTEXITCODE]" }
+    .\build\minic.exe check inputs\edge_unsupported_addition.mini; "[exit $LASTEXITCODE]"
+
+    # all w03 files
+    foreach ($f in Get-ChildItem w03\*.mini) { foreach ($c in "tokens","ast","check","run") { "--- $c $($f.Name)"; .\build\minic.exe $c $f; "[exit $LASTEXITCODE]" } }
+
+
+5. CHECK_PROJECT.py (automatic grader)
+--------------------------------------
+Runs 10 checks on inputs/ and compares exit code, stdout and stderr
+with checks/CASES.json. It does NOT look at w03/ files.
+
+    python CHECK_PROJECT.py --mode start    --compiler .\build\minic.exe
+    python CHECK_PROJECT.py --mode solution --compiler .\build\minic.exe
+
+    --mode start     = untouched project fails the expected way (TODO error).
+                       10/10 here does NOT mean you are done.
+    --mode solution  = your finished code works. 10/10 = done.
+
+"changed fixture" error = a file in inputs/ changed (often line endings).
+Fixed for this repo with:  git config core.autocrlf input
+
+
+6. ROUTINE
+----------
+    1. Edit C++  ->  cmake --build build
+    2. python CHECK_PROJECT.py --mode solution --compiler .\build\minic.exe
+    3. Run the w03 commands to see WHY it works (what you explain)
+
+
+7. GIT
+------
+Remotes:  origin   = my fork (alexfreund381/IPL_Project)
+          upstream = instructor (karelsafr/IPL)
+
+Save work:
+    git add MiniLang/week03-start/src/lexer.cpp MiniLang/week03-start/w03
+    git commit -m "week03: implement identifier scanning + w03 examples"
+    git push origin main
+
+Get new weeks / solutions from the instructor (commit your work first):
+    git fetch upstream
+    git merge upstream/main
+Solutions come with a READ_ME.txt - compare, don't overwrite your work.
+Each week is its own folder - never copy single files between weeks.
+
+Stash / unstash an edit (to see the "before" state):
+    git stash push -m "message" -- path\to\file
+    git stash list
+    git stash pop          (then rebuild!)
+
+
+8. HOW IT ALL FITS
+------------------
+Pipeline:  source.cpp -> lexer.cpp (tokens) -> parser.cpp (AST)
+           -> lower.cpp -> resolver.cpp -> codegen.cpp (C++ text)
+           -> g++ (HostCompiler) -> native .exe
+
+Three languages, three roles:
+    Mini  = SOURCE language          (what you write in .mini files)
+    C++   = IMPLEMENTATION language  (what minic itself is written in)
+    C++   = TARGET language          (what minic generates)
+
+Mini is its own language because it has its own syntax and rules
+(fun main(), print, nil, values typed at runtime). Translating to C++ is
+just an implementation choice - like Cfront (C++ -> C) or TypeScript -> JS.
+Recognising a token (e.g. FOR, PLUS) does NOT mean the parser supports it.

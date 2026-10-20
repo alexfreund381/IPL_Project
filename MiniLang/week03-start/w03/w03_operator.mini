@@ -1,0 +1,14 @@
+fun main() { print 1 + 2; }
+// ---------------------------------------------------------------------------
+// w03_operator.mini  (PDF section 8) - an INTENTIONAL failure.
+//
+// Try:  minic tokens w03/w03_operator.mini   -> exit 0, includes  PLUS 1:22 "+"
+//       minic check  w03/w03_operator.mini   -> exit 1:
+//         w03/w03_operator.mini:1:22: parse: expected ';' after print value
+//
+// Why: the LEXER knows the + symbol, so tokens succeeds. The PARSER this week
+// only understands literals (numbers, strings, true/false/nil) and (...).
+// After "print 1" it requires ';' but finds PLUS, so it stops.
+//
+// Lesson: recognising a token does not implement its grammar.
+// Do NOT fix this - addition arrives in a later stage.

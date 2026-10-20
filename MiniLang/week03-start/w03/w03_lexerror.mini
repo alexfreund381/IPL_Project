@@ -1,0 +1,9 @@
+fun main() { print @; }
+// ---------------------------------------------------------------------------
+// w03_lexerror.mini - a LEXER error (for the phase-label explanation).
+//
+// Try:  minic tokens w03/w03_lexerror.mini   -> exit 1:
+//         w03/w03_lexerror.mini:1:20: lex: unexpected character '@'
+//
+// '@' is not a character Mini knows, so scanToken() rejects it. The label is
+// "lex:" - the error happens before the parser ever sees a token.

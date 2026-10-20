@@ -1,0 +1,79 @@
+Week 03 Explanations
+
+1. Why for2 is one token and why its delimiter remains unread
+
+When scanToken() sees the letter f, it consumes it and calls identifier(), 
+so start_ points at f and current_ at o. My loop uses peek() to look at the next 
+character and only calls advance() if isAsciiAlphaNumeric accepts it. It consumes o, r and 2, 
+because digits are allowed to continue a name, and stops at the semicolon. 
+The slice [start_, current_) is then exactly "for2", and only that complete word is 
+passed to identifierKind(). Since keywords are matched against the whole word, 
+"for2" is not "for", so it becomes one IDENTIFIER. If I classified after reading only "for", 
+it would wrongly split into FOR and NUMBER 2. The semicolon remains unread because peek() only 
+looks at it without consuming it. The loop ends with current_ pointing at the semicolon, so 
+scanToken() reads it next and produces SEMICOLON at 1:5. If identifier() consumed it, 
+the parser would lose the token that ends a statement.
+
+2. Number scanning, token vector, AST, check and output
+
+Number scanning is unchanged: tokens on 123 gives NUMBER 1:1 "123" = 123 both before and 
+after my edit, because input that starts with a digit goes to number(), not identifier(). 
+The token vector for the hello program is FUN, IDENTIFIER main, the parentheses and brace,
+PRINT, NUMBER 42, SEMICOLON, PRINT, STRING "Mini", SEMICOLON, the closing brace, and exactly 
+one EOF. Lexer::run() adds the EOF after scanning finishes; identifier() never adds it.
+The parser builds that vector into 
+(program (fun main () (print (number 42)) (print (string "Mini")))), keeping the two prints 
+in source order. check runs scanning, parsing, lowering and resolution, then stops. 
+It prints nothing and exits 0, which means success, because the resolver has no work 
+to do yet with no variables. run makes codegen turn each print node into a 
+mini::printValue call in C++, compiles that with g++ and the runtime header, 
+and runs it, printing exactly 42 and then Mini. My change only made the tokens possible. 
+Before it, every command failed at 1:1 on the word fun with "lex: TODO WEEK03"; the parser, 
+codegen and runtime were already supplied.
+
+3. Using the phase label to tell errors apart
+
+All three errors exit with code 1, so the label tells me which part of the pipeline failed.
+A lexer error is labeled lex:. For example, "print @;" gives "lex: unexpected character '@'"
+because the lexer does not recognize the character, and the parser never runs. 
+Unsupported syntax is labeled parse:. For "print 1 + 2;", tokens succeeds and even shows PLUS, 
+but check fails with "parse: expected ';' after print value". The lexer knows the + symbol, 
+but this stage's parser has no rule for addition, so it expects a semicolon after 1. 
+This shows that recognizing a token does not implement its grammar. 
+A host build failure is labeled backend:. It comes from HostCompiler in the last step, 
+when g++ compiles the generated C++. I produced one by setting MINI_CXX to a compiler 
+that does not exist, which gave "backend: host compiler 'no_such_compiler' failed". 
+In that case the Mini program was fine, since scanning, parsing, resolution and code 
+generation all succeeded, and only the external C++ toolchain failed. A backend error 
+can only happen with build or run, because the other commands never call g++.
+
+4. Before and after my change, the function I changed, and the edge cases
+
+Before my change, the only kind of input that worked was one with no names in it.
+For example, tokens on inputs\starting_point.mini (123) printed NUMBER 1:1 "123" = 123 and
+EOF 2:1. But minic run inputs\acceptance.mini, the program fun main() { print 42; print "Mini"; },
+exited 1 with "lex: TODO WEEK03: implement identifier scanning" at 1:1, because the very first
+word, fun, reached the placeholder throw. After my change the same command exits 0 and prints
+42 and Mini, and the number example still gives exactly the same output.
+
+The function I changed is Lexer::identifier() in src/lexer.cpp. I replaced the placeholder throw
+and changed nothing else. Its steps run in this order. First, scanToken() has already consumed
+the first letter or underscore, so start_ marks the beginning of the word. Second, a while loop
+uses peek() to look at the next character and calls advance() only while isAsciiAlphaNumeric
+accepts it, so the cursor moves over the rest of the name. Third, it takes the slice of contents_
+from start_ with length current_ - start_, which is the whole word including the first character.
+Fourth, it passes that word to identifierKind() and calls addToken() once, which records the
+token kind, the original spelling and the source position. The order matters: the word has to be
+complete before it is classified, otherwise a keyword at the start of a longer name would be
+split off.
+
+Each edge case catches a different mistake. "for for2 _x3" checks that a keyword is only
+recognized as the whole word, so for is FOR but for2 is an IDENTIFIER, and that a name may
+start with an underscore. "print Print print2 _ x_3 _End9" checks that keyword matching is
+case-sensitive (only lowercase print is PRINT), that a single _ is a valid name, and, because the
+file has no final newline, that the last name is still produced when the input ends right after
+it. This works because peek() returns a sentinel at the end of the file, so the loop stops without
+reading past the buffer. "for2;_x" checks that the delimiter is left for scanToken(). "9name"
+checks that a digit cannot start a name: it becomes NUMBER 9 followed by IDENTIFIER name, because
+scanToken() only calls identifier() for a letter or underscore. Together these show the
+function handles every name correctly, not just fun and print.

@@ -1,0 +1,31 @@
+fun main() { print 42; print "Mini"; }
+// ---------------------------------------------------------------------------
+// w03_hello.mini  (PDF section 7) - the first complete Mini program.
+//
+// Try:  minic tokens / ast / lower / check / cpp / run  w03/w03_hello.mini
+//
+// TOKENS (lexer.cpp):
+//   FUN, IDENTIFIER "main", ( ) {, PRINT, NUMBER 42, ;, PRINT, STRING "Mini",
+//   ;, }, EOF.  The words fun, main and print all go through identifier():
+//   it reads the whole word, then identifierKind() returns FUN / PRINT for
+//   keywords and IDENTIFIER for any other name.
+//   (EOF shows a later line here only because of these comment lines.)
+//
+// AST (parser.cpp):
+//   (program
+//     (fun main ()
+//       (print (number 42))
+//       (print (string "Mini"))
+//     )
+//   )
+// LOWER: identical tree - lowering does nothing this week.
+// CHECK: prints nothing, exit 0 - the resolver is empty this week.
+// CPP:   prints C++ source that calls mini::printValue twice. That is text,
+//        not program output - nothing has run yet.
+// RUN:   g++ compiles that C++ with runtime/mini_runtime.hpp, then runs it:
+//          42
+//          Mini
+//
+// Before the lexer edit every command failed at 1:1 with
+//   lex: TODO WEEK03: implement identifier scanning
+// because the very first word, fun, needs identifier().

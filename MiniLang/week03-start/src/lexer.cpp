@@ -177,9 +177,31 @@ private:
   }
 
   void identifier() {
-    // TODO WEEK03: read the entire name, classify it, then add its token.
-    throw CompileError(Phase::Lex, source_.name(), source_.span(start_, 1),
-                       "TODO WEEK03: implement identifier scanning");
+    // Read the entire name. The first letter was already consumed by
+    // scanToken(); keep consuming while the next char is a letter, digit, or _.
+    while (isAsciiAlphaNumeric(peek())) {
+      advance();
+    }
+
+
+    // Classify it: a keyword's own kind (e.g. Fun), otherwise Identifier.
+    const std::string_view text = contents_.substr(start_, current_ - start_);
+
+    /*
+     Step by step for main:
+    1. Compare "main" with "fun": no match.
+    2. Compare it with "var": no match.
+    3. … and so on through all 12 keywords, with no match.
+    4. The loop finishes without ever returning, so the last line runs and returns TokenKind::Identifier.
+
+    For fun, the very first comparison matches, so it returns TokenKind::Fun right away and never reaches the last line.
+
+     So every word ends up as either a keyword or an identifier. Names like main, x, for2 and Print all become IDENTIFIER
+    tokens.
+    */
+
+    // Add its token. Identifiers carry no literal value.
+    addToken(identifierKind(text));
   }
 
   void number() {

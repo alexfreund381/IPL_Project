@@ -1,0 +1,14 @@
+123
+// ---------------------------------------------------------------------------
+// w03_number.mini  (PDF section 8) - the baseline that must NOT change.
+//
+// Try:  minic tokens w03/w03_number.mini
+//   NUMBER 1:1 "123" = 123     <- made by number(), not identifier()
+//   EOF ...                    (2:1 without these comment lines)
+//
+// It gives the same result before AND after your edit, which shows your
+// change did not break number scanning.
+//
+// This is only a token fragment, not a program, so ast / check / run fail:
+//   parse: expected 'fun main()' at the start of the program
+// That is expected - every Mini program must start with fun main().
