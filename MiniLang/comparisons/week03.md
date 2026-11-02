@@ -1,6 +1,7 @@
 # Week 03: identifier scanning
 
 **Works:** all 10 checks pass in solution mode.
+**Unresolved:** nothing.
 
 ## Comparison with the solution
 
