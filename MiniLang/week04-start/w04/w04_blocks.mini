@@ -1,0 +1,23 @@
+fun main() {
+  var x = 10;
+  { var x = 20; print x; }
+  print x;
+}
+// ---------------------------------------------------------------------------
+// w04_blocks.mini  (PDF section 7) - shadowing: two declarations, two IDs.
+//
+// Try:  minic check w04/w04_blocks.mini   -> no output, exit 0
+//       minic run   w04/w04_blocks.mini   -> 20
+//                                            10
+//       minic cpp   w04/w04_blocks.mini   -> mini_variable_0 (outer x) and
+//                                            mini_variable_1 (inner x, inside { })
+//
+// Before the edit: check/run stop at "resolve: TODO WEEK04: resolve variable
+// declaration" on the outer var.
+//
+// Hand trace:
+//   outer var x   -> ID 0 in main's map, then defined
+//   enter block   -> new map; inner var x -> ID 1
+//   inner print x -> found in the inner map: ID 1 -> prints 20
+//   leave block   -> inner map popped; final print x -> ID 0 -> prints 10
+// The maps hold IDs and the defined flag, not the values 10 and 20.

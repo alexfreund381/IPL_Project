@@ -54,9 +54,14 @@ private:
     }
 
     if (auto *variable = std::get_if<VarStatement>(&statement.node)) {
-      // TODO WEEK04: declare, resolve the initializer, define, then return.
-      throw CompileError(Phase::Resolve, source_.name(), variable->name_span,
-                         "TODO WEEK04: resolve variable declaration");
+      // Declare first, so the initializer can't read the new name.
+      // In the map, not yet defined:
+      declare(*variable);
+      // Check the value after =:
+      resolveExpression(variable->initializer);
+      // Now later statements may use it:
+      define(variable->name);
+      return;
     }
 
     if (auto *assignment =
@@ -74,10 +79,12 @@ private:
     }
 
     if (auto *block = std::get_if<BlockStatement>(&statement.node)) {
-      (void)block;
-      // TODO WEEK04: begin scope, resolve the block's statements, end scope.
-      throw CompileError(Phase::Resolve, source_.name(), statement.span,
-                         "TODO WEEK04: implement block scope");
+      // One map for the whole block: push it, resolve the statements
+      // (nested blocks recurse back here), then pop it so its names disappear.
+      beginScope();
+      resolveStatements(block->statements);
+      endScope();
+      return;
     }
 
     throw CompileError(Phase::Resolve, source_.name(), statement.span,
@@ -85,16 +92,24 @@ private:
   }
 
   void declare(VarStatement &variable) {
-    (void)next_symbol_;
-    // TODO WEEK04: insert an undefined binding; reject duplicates; record its ID.
-    throw CompileError(Phase::Resolve, source_.name(), variable.name_span,
-                       "TODO WEEK04: declare variable '" + variable.name + "'");
+    // Reference: change the real current map, not a copy.
+    auto &scope = scopes_.back();
+    const SymbolId id = next_symbol_;
+    // insert() fails if the name is already in this map; outer maps are not checked.
+    if (!scope.insert({variable.name, Binding{id, false}}).second) {
+      throw CompileError(Phase::Resolve, source_.name(), variable.name_span,
+                         "duplicate variable '" + variable.name +
+                             "' in the same scope");
+    }
+    // Codegen turns this into mini_variable_<id>.
+    variable.resolved_id = id;
+    // Never reset, so every declaration gets its own ID.
+    ++next_symbol_;
   }
 
   void define(const std::string &name) {
-    // TODO WEEK04: mark the existing current-scope binding as defined.
-    throw CompileError(Phase::Resolve, source_.name(),
-                       "TODO WEEK04: define variable '" + name + "'");
+    // Flip the flag on the binding declare() just added; no new ID.
+    scopes_.back().at(name).defined = true;
   }
 
   SymbolId resolveName(const std::string &name, const SourceSpan span) const {

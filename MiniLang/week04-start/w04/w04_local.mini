@@ -1,0 +1,9 @@
+fun main() { print 10; }
+// ---------------------------------------------------------------------------
+// w04_local.mini  (PDF section 8) - baseline: a bare literal needs no binding.
+//
+// Try:  minic check w04/w04_local.mini   -> no output, exit 0
+//       minic run   w04/w04_local.mini   -> 10
+//
+// Same result before AND after the edit: there is no var and no block, so
+// neither TODO is reached.

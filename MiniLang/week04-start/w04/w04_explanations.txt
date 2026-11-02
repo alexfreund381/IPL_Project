@@ -1,0 +1,41 @@
+Week 04 Explanations
+
+1. Before and after
+
+Before: only programs without var or blocks worked. print 10 printed 10, but the
+acceptance program (var x = 10; { var x = 20; print x; } print x;) failed check and
+run with "resolve: TODO WEEK04: resolve variable declaration".
+After: it prints 20 then 10, and print 10 still works. The ast output does not
+change, because it shows names, not IDs.
+
+2. What I changed (src\resolver.cpp) and why the order matters
+
+- declare(): inserts the name into the current map as {new ID, not defined}.
+  If the name is already in that map, it throws "duplicate variable". Then it
+  stores the ID on the node and increments the counter, which is never reset.
+- define(): marks that binding as defined.
+- var: declare(), then resolve the initializer, then define(). While the
+  initializer is checked, the name exists but is undefined, so var x = x; is
+  rejected.
+- block: beginScope(), resolve the statements, endScope(). Each block gets one
+  map, which is removed at }. Nested blocks recurse back into this branch.
+
+Edge cases: nested blocks restore the outer x (3, 2, 10). Sibling blocks can both
+declare x. A block's y does not leak out of it. Duplicates are caught in a block
+and in main. var x = x is rejected. A block with no var still runs (7, 10). Two
+declarations get two IDs. After define(), an assignment can use the variable.
+
+3. A rejected example
+
+var x = 10; { x = 30; } fails in the resolve phase: "unknown variable 'x' in
+current scope". Scanning and parsing succeed. Lookup only checks the block's own
+(empty) map, not main's. That is expected this week; outward lookup comes in
+week 05.
+
+4. Why IDs are distinct when the maps hold no values
+
+The resolver never sees 10 or 20. Its maps only record which declaration a name
+means. The two var x are different variables with the same name, so they get IDs
+0 and 1. Codegen turns these into mini_variable_0 and mini_variable_1. An
+assignment changes a value at run time, but the ID stays the same, because it is
+still the same declaration.

@@ -1,0 +1,13 @@
+fun main() {
+  print 42;
+  print "Mini";
+}
+// ---------------------------------------------------------------------------
+// w04_hello.mini  (PDF section 2, saved there as inputs/hello.mini) - avoids
+// both TODOs.
+//
+// Try:  minic tokens w04/w04_hello.mini
+//       minic ast    w04/w04_hello.mini
+//       minic run    w04/w04_hello.mini   -> 42
+//                                            Mini
+// Same result before AND after the edit: no var and no nested block.

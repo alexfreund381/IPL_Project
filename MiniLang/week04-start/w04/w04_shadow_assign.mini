@@ -1,0 +1,12 @@
+fun main() { var x = 1; { var x = 2; x = 5; print x; } print x; }
+// ---------------------------------------------------------------------------
+// w04_shadow_assign.mini - my own example: an assignment inside a block
+// changes only the inner x.
+//
+// Prediction: the inner var x gets ID 1, and x = 5 looks x up in the inner map,
+// so it also uses ID 1. The outer x (ID 0) is never touched.
+//
+// Try:  minic run w04/w04_shadow_assign.mini   -> 5
+//                                                  1
+// Compare w04_outer.mini: without the inner var, x = 30 fails, because the
+// block's map has no x.

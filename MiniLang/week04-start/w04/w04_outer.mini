@@ -1,0 +1,10 @@
+fun main() { var x = 10; { x = 30; } print x; }
+// ---------------------------------------------------------------------------
+// w04_outer.mini  (PDF section 8) - the current-scope-only boundary.
+//
+// Try:  minic check w04/w04_outer.mini   -> exit 1:
+//         w04/w04_outer.mini:1:28: resolve: unknown variable 'x' in current scope
+//
+// Before the edit it fails earlier, at the TODO for the outer var.
+// After the edit it still fails, and that is correct for this week: the block's
+// map is empty and lookup does not go on to main's map. Week 05 adds that.
