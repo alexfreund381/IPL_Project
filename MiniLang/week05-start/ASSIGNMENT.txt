@@ -1,0 +1,290 @@
+WEEK 05 — Bind reads and assignments to the nearest declaration
+
+EXERCISE FOCUS
+We will implement lexical lookup and connect it to reads, grouping and writes.
+The declaration and block-scope protocol from the previous exercise is ready.
+
+GOAL AND LECTURE CONNECTION
+Find the nearest visible declaration from the innermost scope outwards.
+Annotate every variable use and assignment target with its existing SymbolId,
+including a use inside parentheses or on the right side of an assignment.
+Explain shadowing and why an undefined inner binding blocks outer fallback.
+Work in the project folder you received. Everything needed is included here.
+When the solution is provided, use its READ_ME.txt to compare your work.
+
+STARTING DEMONSTRATION — WORKS BEFORE THE EDIT
+inputs/starting_point.mini contains this line and a final newline:
+    fun main() { print 42; }
+From the package root, run your existing built executable:
+    ./build/minic run inputs/starting_point.mini
+Exact stdout is 42 followed by a newline:
+    42
+stderr is empty. Exit status is 0 before and after the edit.
+A bare literal needs no name resolution, so the end-to-end baseline works.
+Replace ./build/minic with your actual IDE/build executable path if necessary.
+
+STARTING POINT: PROVIDED INFRASTRUCTURE AND LIMITS
+Block traversal, declare(), define() and the VarStatement visitor are complete.
+Keep that earlier work. The parser, AST nodes, C++ generator and runtime storage
+are also supplied. scopes_ holds name-to-Binding maps, outermost to innermost.
+Each binding contains an id and a defined flag, not a runtime value.
+You complete resolveName(), the whole resolveExpression() visitor, and the
+AssignmentStatement branch body. The start explicitly rejects variable reads,
+grouping and assignments; local reads are intentionally unavailable too.
+Bare literal programs and declarations with bare literal initializers work
+when no name is used. Grouped literals still encounter the grouping TODO.
+The subset has main(), literals, grouping, print, variables, assignment and
+blocks. Operators, branches, loops and general calls are absent. Lowering is
+identity. --help describes final Mini, not this exercise's feature list.
+No runtime memory manager, interpreter or static type checker is assigned.
+
+YOUR C++ TASK — THREE CONNECTED PARTS IN src/resolver.cpp
+Retain the C++ method signatures and the assignment node-dispatch condition.
+Remove the TODO bodies; leave all declaration and block handlers unchanged.
+
+1. Resolver::resolveName(const std::string &name, const SourceSpan span) const
+   Visit scopes_ in reverse order, beginning at the most recent map.
+   Find name in each map. If absent, continue into the next outer scope.
+   At the FIRST match, inspect defined. If false, throw CompileError using
+   Phase::Resolve, source_.name(), span and the message:
+       cannot read variable '<name>' in its own initializer
+   Substitute the actual name. Do not skip an undefined match to try outer x.
+   If defined, return that binding's EXISTING id immediately. Do not allocate
+   IDs, mutate maps, or return runtime values. Only after every map has no
+   match, throw the same kind of error with: unknown variable '<name>'
+
+2. Resolver::resolveExpression(Expression &expression), the complete body
+   For VariableExpression, obtain mutable access to the node, call resolveName
+   with its name and expression.span, store the returned ID in resolved_id,
+   and return. For GroupingExpression, obtain its node, recursively resolve
+   the owned child expression and return. Literals fall through unchanged.
+   Do not copy an AST node and annotate only the copy. Do not evaluate values.
+
+3. AssignmentStatement branch in Resolver::resolveStatement(Statement &statement)
+   Resolve the target name using assignment->name and assignment->name_span;
+   store that ID in assignment->resolved_id. Then resolveExpression on
+   assignment->value, and return. The target must already be declared.
+   Resolve the value even if target lookup succeeds: it may contain a grouped
+   read or an unknown name. Assignment does not create a new declaration ID.
+
+The same lookup policy serves expression reads and assignment targets.
+Do not implement a second scope stack or repeat declare()/define()/block
+traversal. Those parts already provide the scopes and declaration identities.
+
+BUILD AND CHECK THE RIGHT PROJECT
+Use your existing course/IDE build. In commands below, minic means the
+executable from your rebuilt project, for example ./build/minic. Replace
+minic with your actual IDE/build path; it need not be on PATH.
+Commands are run from this package root; inputs/ contains the supplied cases.
+Rebuild after C++ edits: cmake --build <your-build-directory> --config Debug
+Use your actual build directory or IDE Build. Stop if the build fails.
+Successful check has empty stdout/stderr and exit 0. run also emits C++,
+invokes the host compiler and executes the generated program. AST output is
+not execution. Changing only a .mini file does not require rebuilding minic.
+
+POSITIVE ACCEPTANCE
+inputs/acceptance.mini contains:
+    fun main() {
+      var x = 10;
+      { x = 30; }
+      print x;
+    }
+Before and after editing, use your rebuilt executable:
+    minic ast inputs/acceptance.mini
+    minic check inputs/acceptance.mini
+    minic run inputs/acceptance.mini
+ast succeeds in both versions, with empty stderr and exit 0. Exact stdout:
+    (program
+      (fun main ()
+        (var x (number 10))
+        (block
+          (assign x (number 30))
+        )
+        (print (variable x))
+      )
+    )
+Start check and run: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: bind assignment target and value
+Completed check: exit 0, empty stdout and stderr. Completed run: exit 0; empty stderr; exact stdout:
+    30
+The first start failure is the assignment branch. After completion, the
+inner assignment and later read share outer declaration ID 0. The runtime
+value becomes 30; no second x is declared. Stage 04 intentionally rejected
+this program because its lookup searched only the current map.
+
+MANDATORY EDGE CASES — INPUTS AND EXPECTED RESULTS
+Each source below is the complete bundled input, with a final newline.
+Errors include the source path/location before the listed resolve message.
+
+1. Local read: inputs/edge_local.mini
+    fun main() { var x = 10; print x; }
+   Run: minic run inputs/edge_local.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: bind variable read
+   Completed: exit 0; empty stderr; exact stdout:
+    10
+   Reverse search must still inspect the current map first.
+
+2. Nearest declaration wins: inputs/edge_nearest.mini
+    fun main() { var x = 10; { var x = 20; print x; } print x; }
+   Run: minic run inputs/edge_nearest.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: bind variable read
+   Completed: exit 0; empty stderr; exact stdout:
+    20
+    10
+   Searching outermost-first would bind the inner print to the wrong
+   declaration.
+
+3. Nearest assignment target: inputs/edge_nearest_assignment.mini
+    fun main() { var x = 10; { var x = 20; { x = 30; } print x; } print x; }
+   Run: minic run inputs/edge_nearest_assignment.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: bind assignment target and value
+   Completed: exit 0; empty stderr; exact stdout:
+    30
+    10
+   Skip the empty deepest map, then update the nearest x rather than the
+   outermost x.
+
+4. Undefined inner binding stops the search: inputs/edge_self_initializer.mini
+    fun main() { var x = 1; { var x = x; } }
+   Run: minic check inputs/edge_self_initializer.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: bind variable read
+   Completed: exit 1; empty stdout; stderr contains:
+    resolve: cannot read variable 'x' in its own initializer
+   The inner x already exists. Its unfinished initializer must not read
+   outer x instead.
+
+5. No match in any active scope: inputs/edge_missing.mini
+    fun main() { print missing; }
+   Run: minic check inputs/edge_missing.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: bind variable read
+   Completed: exit 1; empty stdout; stderr contains:
+    resolve: unknown variable 'missing'
+   An absent name is different from a present but undefined binding.
+
+6. Initializer reads another outer name: inputs/edge_outer_read.mini
+    fun main() { var original = 5; { var copy = original; print copy; } }
+   Run: minic run inputs/edge_outer_read.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: bind variable read
+   Completed: exit 0; empty stderr; exact stdout:
+    5
+   copy has its own ID; its initializer legitimately uses the outer
+   original.
+
+7. A finished block stays invisible: inputs/edge_leak.mini
+    fun main() { { var y = 1; } print y; }
+   Run: minic check inputs/edge_leak.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: bind variable read
+   Completed: exit 1; empty stdout; stderr contains:
+    resolve: unknown variable 'y'
+   Only active maps participate. Removed child scopes must never be
+   searched.
+
+8. Keep declaration checking: inputs/edge_duplicate.mini
+    fun main() { var x = 1; var x = 2; }
+   Run: minic check inputs/edge_duplicate.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: duplicate variable 'x' in the same scope
+   Completed: exit 1; empty stdout; stderr contains:
+    resolve: duplicate variable 'x' in the same scope
+   This supplied check rejects the second declaration in both versions
+   without requesting name lookup.
+
+9. Nested grouping around an outward read: inputs/edge_grouped_read.mini
+    fun main() { var x = 7; { print ((x)); } }
+   Run: minic run inputs/edge_grouped_read.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: resolve grouped expression
+   Completed: exit 0; empty stderr; exact stdout:
+    7
+   Visit both owned GroupingExpression children so the variable inside
+   receives its ID.
+
+10. Grouping around a literal: inputs/edge_grouped_literal.mini
+    fun main() { print ((42)); }
+   Run: minic run inputs/edge_grouped_literal.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: resolve grouped expression
+   Completed: exit 0; empty stderr; exact stdout:
+    42
+   The start deliberately stops at the grouping TODO, even though a bare
+   literal works. Completion recursively reaches the literal and does
+   nothing further.
+
+11. Resolve the assignment value too: inputs/edge_assignment_rhs.mini
+    fun main() { var x = 1; var y = 2; { x = (y); } print x; }
+   Run: minic run inputs/edge_assignment_rhs.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: bind assignment target and value
+   Completed: exit 0; empty stderr; exact stdout:
+    2
+   Binding the target is insufficient: the grouped read on the right also
+   needs its declaration ID.
+
+12. Reject an unknown assignment target: inputs/edge_unknown_target.mini
+    fun main() { missing = 1; }
+   Run: minic check inputs/edge_unknown_target.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: bind assignment target and value
+   Completed: exit 1; empty stdout; stderr contains:
+    resolve: unknown variable 'missing'
+   Assignment does not implicitly declare a name. Resolve the target before
+   visiting its value.
+
+13. Reject an unknown name in the value: inputs/edge_unknown_rhs.mini
+    fun main() { var x = 1; x = missing; }
+   Run: minic check inputs/edge_unknown_rhs.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: bind assignment target and value
+   Completed: exit 1; empty stdout; stderr contains:
+    resolve: unknown variable 'missing'
+   A known target does not make an unknown right-hand-side name valid.
+
+14. Grouping in an initializer: inputs/edge_grouped_initializer.mini
+    fun main() { var original = 5; { var copy = ((original)); print copy; } }
+   Run: minic run inputs/edge_grouped_initializer.mini
+   Start: exit 1; empty stdout; stderr contains:
+    resolve: TODO WEEK05: resolve grouped expression
+   Completed: exit 0; empty stderr; exact stdout:
+    5
+   The supplied declaration visitor calls your expression traversal before
+   marking copy defined.
+
+REPEATABLE ACCEPTANCE CHECKS
+Before editing, from this package root:
+    python3 CHECK_PROJECT.py --mode start --compiler ./build/minic
+After editing and rebuilding your own project:
+    python3 CHECK_PROJECT.py --mode solution --compiler ./build/minic
+Use your actual executable path. Python 3.8+ is only for this optional runner;
+all manual minic commands above remain available without Python.
+The runner reads checks/CASES.json and the bundled inputs. Its 18 checks compare
+stdout, stderr and exit status in the selected mode. PASS in start mode
+includes expected TODO errors; it does not certify a completed exercise.
+Solution mode requires both successful programs and the stated rejections.
+Use the cases to find mistakes, then explain why each result is required.
+Then try a small example of your own and predict the result before running it.
+
+DONE CHECKLIST
+[ ] Only lookup, expression traversal and the assignment branch were completed.
+[ ] Bare literals remain valid; grouped literals and grouped reads now work.
+[ ] The nearest matching declaration supplies IDs to both reads and writes.
+[ ] An undefined nearest binding stops lookup without outer fallback.
+[ ] Missing names are rejected after all active maps have been searched.
+[ ] Assignment resolves its target before recursively resolving its value.
+[ ] Unknown targets and unknown right-hand-side names are both rejected.
+[ ] Earlier declaration/block handling is unchanged; all 18 solution checks pass.
+[ ] You can explain why a changing runtime value keeps the same binding ID.
+
+WHAT WE WILL DO NEXT
+Keep the completed binding traversal. In Stage 07, we will examine expression
+precedence and implement the additive parser loop and unary operator branch.
+The next project supplies the operator AST nodes, other parser levels,
+additional resolver traversal, C++ generation and runtime helpers. Your
+existing bindings remain relevant inside larger expressions. Division and
+string concatenation stay outside that exercise.
