@@ -60,11 +60,12 @@ private:
       return;
     }
 
-    if (auto *assignment =
-            std::get_if<AssignmentStatement>(&statement.node)) {
-      // TODO WEEK05: bind the target, resolve the value, then return.
-      throw CompileError(Phase::Resolve, source_.name(), assignment->name_span,
-                         "TODO WEEK05: bind assignment target and value");
+    if (auto *assignment = std::get_if<AssignmentStatement>(&statement.node)) {
+      // Target first: it must already exist; reuse its ID (no new declaration).
+      assignment->resolved_id = resolveName(assignment->name, assignment->name_span);
+      // Then the value: it may contain reads too, e.g. x = (y) or x = missing.
+      resolveExpression(assignment->value);
+      return;
     }
 
     if (auto *expression =
@@ -100,21 +101,38 @@ private:
   void define(const std::string &name) { scopes_.back().at(name).defined = true; }
 
   SymbolId resolveName(const std::string &name, const SourceSpan span) const {
-    // TODO WEEK05: search scopes from inner to outer; reject undefined bindings.
+    // Search from the innermost map (rbegin) outward to main's map.
+    for (auto scope = scopes_.rbegin(); scope != scopes_.rend(); ++scope) {
+      const auto binding = scope->find(name);
+      // Not in this map: keep going outward.
+      if (binding == scope->end()) {
+        continue;
+      }
+      // First match decides: if it's not defined yet, don't fall back to an outer x.
+      if (!binding->second.defined) {
+        throw CompileError(Phase::Resolve, source_.name(), span,
+                           "cannot read variable '" + name +
+                               "' in its own initializer");
+      }
+      // Return the existing ID; lookup never creates one.
+      return binding->second.id;
+    }
+    // No active map has the name.
     throw CompileError(Phase::Resolve, source_.name(), span,
-                       "TODO WEEK05: implement name lookup for '" + name + "'");
+                       "unknown variable '" + name + "'");
   }
 
   void resolveExpression(Expression &expression) {
-    if (std::holds_alternative<VariableExpression>(expression.node)) {
-      // TODO WEEK05: annotate this read with its declaration's existing ID.
-      throw CompileError(Phase::Resolve, source_.name(), expression.span,
-                         "TODO WEEK05: bind variable read");
+    // get_if (not holds_alternative) gives a pointer, so we can write onto the real node.
+    if (auto *variable = std::get_if<VariableExpression>(&expression.node)) {
+      // A read: store the ID of the declaration it refers to.
+      variable->resolved_id = resolveName(variable->name, expression.span);
+      return;
     }
-    if (std::holds_alternative<GroupingExpression>(expression.node)) {
-      // TODO WEEK05: resolve the owned expression recursively.
-      throw CompileError(Phase::Resolve, source_.name(), expression.span,
-                         "TODO WEEK05: resolve grouped expression");
+    if (auto *grouping = std::get_if<GroupingExpression>(&expression.node)) {
+      // ( ... ): resolve what's inside; nested parentheses recurse again.
+      resolveExpression(*grouping->expression);
+      return;
     }
     // Literals need no name resolution and remain a working baseline.
   }

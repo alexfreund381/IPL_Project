@@ -1,0 +1,15 @@
+fun main() { var x = 1; print x; { x = 2; print x; } print x; }
+// ---------------------------------------------------------------------------
+// w05_same_id.mini - my own example: the value changes, the ID does not.
+//
+// Prediction: every x here is the one declaration (ID 0). The block has no var,
+// so x = 2 and the inner print find main's x. The last print sees 2, because
+// the block changed the same variable.
+//
+// Try:  minic run w05/w05_same_id.mini   -> 1
+//                                           2
+//                                           2
+//       minic cpp w05/w05_same_id.mini   -> every read and write uses mini_variable_0
+//
+// Compare week 04's w04_shadow_assign.mini: there the block has its own var x,
+// so the assignment changed only the inner x and the outer one stayed 1.

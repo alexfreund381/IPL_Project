@@ -1,0 +1,12 @@
+fun main() { var x = 1; { var x = x; } }
+// ---------------------------------------------------------------------------
+// w05_self.mini  (PDF section 8) - the nearest match is undefined, so stop.
+//
+// Try:  minic check w05/w05_self.mini   -> exit 1:
+//         w05/w05_self.mini:1:35: resolve: cannot read variable 'x' in its own initializer
+//
+// Before the edit: "resolve: TODO WEEK05: bind variable read".
+//
+// The inner x is declared (undefined) before its initializer is checked, so the
+// search finds it first in the block's map. Lookup must stop there. It must not
+// skip to main's x and copy 1.

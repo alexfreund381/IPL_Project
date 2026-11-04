@@ -1,0 +1,45 @@
+Week 05 Explanations
+
+1. Before and after
+
+Before: print 42 worked, but any use of a name failed. The acceptance program
+(var x = 10; { x = 30; } print x;) failed with "resolve: TODO WEEK05: bind
+assignment target and value". Week 04 also rejected it, because lookup only
+checked the current map.
+After: it prints 30, and print 42 still works. The ast output is unchanged.
+
+2. What I changed (src\resolver.cpp) and why the order matters
+
+- resolveName(): searches the maps from innermost to outermost. If the name is
+  missing from a map, it moves outward. At the first match, it throws "cannot
+  read variable ... in its own initializer" if that binding is undefined, and
+  otherwise returns its existing ID. If no map has the name, it throws "unknown
+  variable".
+- resolveExpression(): a read stores the ID from resolveName() on the node. A
+  grouping resolves the expression inside it, so ((x)) still binds x. Literals
+  need nothing.
+- assignment: looks up the target first and stores its ID, then resolves the
+  value.
+
+Edge cases: the nearest declaration wins, for reads and for assignments
+(innermost-first, not outermost-first). An undefined inner x blocks the outer
+x. Missing names, missing assignment targets and missing names in a value are
+all rejected. A finished block's y stays invisible. Grouping is resolved in
+print, in assignment values and in initializers.
+
+3. A rejected example
+
+var x = 1; { var x = x; } fails in the resolve phase: "cannot read variable 'x'
+in its own initializer". Scanning and parsing succeed. The inner x is declared
+before its initializer is checked, so lookup finds it first, and it is still
+undefined. Lookup stops there and does not use the outer x. That is expected:
+the inner x is the variable the code names, and it isn't ready yet.
+
+4. Assignment: target, then value, and why the ID stays the same
+
+The target is resolved first because it must already exist. Assignment never
+declares a name, so missing = 1 is rejected. The value still has to be resolved,
+because it can contain reads too: x = (y) needs y's ID, and x = missing must be
+rejected. A changing runtime value keeps the same ID because the ID identifies
+the declaration, not the value. In w05_same_id.mini, x is 1 and then 2, but
+every read and write uses mini_variable_0.

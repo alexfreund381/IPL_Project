@@ -1,0 +1,21 @@
+fun main() {
+  var x = 10;
+  { x = 30; }
+  print x;
+}
+// ---------------------------------------------------------------------------
+// w05_outer.mini  (PDF section 7) - an assignment in a block updates the outer x.
+//
+// Try:  minic check w05/w05_outer.mini   -> no output, exit 0
+//       minic run   w05/w05_outer.mini   -> 30
+//       minic cpp   w05/w05_outer.mini   -> mini_variable_0 only, for the
+//                                           declaration, the assignment and the read
+//
+// Before the edit: exit 1, "w05/w05_outer.mini:3:5: resolve: TODO WEEK05: bind
+// assignment target and value". (Week 04 also rejected it: current map only.)
+//
+// Hand trace:
+//   var x = 10    -> declare gives ID 0
+//   x = 30        -> the block's map has no x; main's map does -> ID 0
+//   print x       -> main's map -> ID 0
+// There is one declaration. Its value goes 10 -> 30 when the program runs.

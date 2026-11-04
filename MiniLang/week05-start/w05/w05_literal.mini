@@ -1,0 +1,8 @@
+fun main() { print 42; }
+// ---------------------------------------------------------------------------
+// w05_literal.mini  (PDF section 8) - baseline: a bare literal needs no lookup.
+//
+// Try:  minic run w05/w05_literal.mini   -> 42
+//
+// Same result before AND after the edit. (print ((42)) would fail before the
+// edit, at the grouping TODO.)
