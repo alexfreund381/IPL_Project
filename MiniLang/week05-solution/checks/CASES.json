@@ -1,0 +1,295 @@
+{
+  "schema_version": 1,
+  "week": 5,
+  "acceptance_description": "Resolve every variable read, recursively visit grouping and bind assignment targets before resolving their values. Lookup searches active scopes from inside out and returns the nearest existing SymbolId. An undefined nearest binding stops without fallback; absent names are rejected. Literal execution and supplied declaration checks remain intact. After these checks pass in solution mode, try another nested block and explain which declaration each name reaches.",
+  "fixture_sha256": {
+    "starting_point.mini": "381d9763218e60b3db6f411318aa275f59f671b78193d3e9215588e5c9e1f90b",
+    "acceptance.mini": "30ade68886aa6f1284d0cccc4ae4cac6073d371dc01583dcc360ef005546e92b",
+    "edge_local.mini": "000690de7cb7997b1bdeb06c5438ac56cb164e723002d6fe9a995fde5a4b195f",
+    "edge_nearest.mini": "26d0842e62dbb191994e816f83f3fb38fa37a88a8c2aab524dd4d2588f700b0c",
+    "edge_nearest_assignment.mini": "c493c0c37389ee107bcbdead6f60e69016d4661b424c6bd04e6d537c14cfccd8",
+    "edge_self_initializer.mini": "2f0946c3e597768c3fd4a7218604ddfa2aa0e40f03eaaa2a596bd78c367ccd96",
+    "edge_missing.mini": "cd5b95029b7cdbe9f1055c1d49faa1b3fe4c9ff798f502e9f228c2821250a97b",
+    "edge_outer_read.mini": "f483121af4c2ec415fea72a7703c85eb136afc3f4235525ae4a4e5d3cb827bf3",
+    "edge_leak.mini": "b1341e82f00c3401b24cc8ef4612fd827680d0cdcc701d6191c4c9c19248090a",
+    "edge_duplicate.mini": "b43090b571672bef521055a9d09c7695b1b4df201572f718be28330b6f29bf6c",
+    "edge_grouped_read.mini": "b27af10eb3916cfefec409199028c3abebbb19b1f4f0544461f4fa06c93596fb",
+    "edge_grouped_literal.mini": "fca525cb47427d11da584291588594bb034871c40d5dc038292cce785926d414",
+    "edge_assignment_rhs.mini": "04b88d717f4bf8ef4ebd88f964710b6b445364f5bea1c9677a02672da58202c4",
+    "edge_unknown_target.mini": "da7a1223ef43bea0da09104b726b6fc730b40ba5eea587fc827acb88944d19ae",
+    "edge_unknown_rhs.mini": "ba86af5cab8d562df4fc2b32f578e0562c33b48924582b4934f4d52975200c3c",
+    "edge_grouped_initializer.mini": "418c17c1431dc79d72c299bad4eeadfcb1ab9b5ce925f85d5963c3d0d2e9ad82"
+  },
+  "checks": [
+    {
+      "id": "baseline",
+      "file": "starting_point.mini",
+      "command": "run",
+      "start": {
+        "exit": 0,
+        "stdout": "42\n",
+        "stderr": ""
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "42\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-ast-already-parses",
+      "file": "acceptance.mini",
+      "command": "ast",
+      "start": {
+        "exit": 0,
+        "stdout": "(program\n  (fun main ()\n    (var x (number 10))\n    (block\n      (assign x (number 30))\n    )\n    (print (variable x))\n  )\n)\n",
+        "stderr": ""
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "(program\n  (fun main ()\n    (var x (number 10))\n    (block\n      (assign x (number 30))\n    )\n    (print (variable x))\n  )\n)\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-check",
+      "file": "acceptance.mini",
+      "command": "check",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind assignment target and value"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-run",
+      "file": "acceptance.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind assignment target and value"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "30\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "current-scope-read-restored",
+      "file": "edge_local.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind variable read"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "10\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "nearest-declaration-wins",
+      "file": "edge_nearest.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind variable read"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "20\n10\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "nearest-outer-assignment-keeps-id",
+      "file": "edge_nearest_assignment.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind assignment target and value"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "30\n10\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "undefined-inner-blocks-fallback",
+      "file": "edge_self_initializer.mini",
+      "command": "check",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind variable read"
+      },
+      "solution": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: cannot read variable 'x' in its own initializer"
+      }
+    },
+    {
+      "id": "missing-after-all-scopes",
+      "file": "edge_missing.mini",
+      "command": "check",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind variable read"
+      },
+      "solution": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: unknown variable 'missing'"
+      }
+    },
+    {
+      "id": "outward-read-in-initializer",
+      "file": "edge_outer_read.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind variable read"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "5\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "block-local-stays-invisible",
+      "file": "edge_leak.mini",
+      "command": "check",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind variable read"
+      },
+      "solution": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: unknown variable 'y'"
+      }
+    },
+    {
+      "id": "duplicate-check-unchanged",
+      "file": "edge_duplicate.mini",
+      "command": "check",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: duplicate variable 'x' in the same scope"
+      },
+      "solution": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: duplicate variable 'x' in the same scope"
+      }
+    },
+    {
+      "id": "nested-grouping-outward-read",
+      "file": "edge_grouped_read.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: resolve grouped expression"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "7\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "grouping-still-traverses-literal",
+      "file": "edge_grouped_literal.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: resolve grouped expression"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "42\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "assignment-resolves-rhs",
+      "file": "edge_assignment_rhs.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind assignment target and value"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "2\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "assignment-rejects-unknown-target",
+      "file": "edge_unknown_target.mini",
+      "command": "check",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind assignment target and value"
+      },
+      "solution": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: unknown variable 'missing'"
+      }
+    },
+    {
+      "id": "assignment-rejects-unknown-rhs",
+      "file": "edge_unknown_rhs.mini",
+      "command": "check",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: bind assignment target and value"
+      },
+      "solution": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: unknown variable 'missing'"
+      }
+    },
+    {
+      "id": "initializer-traverses-grouping",
+      "file": "edge_grouped_initializer.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: TODO WEEK05: resolve grouped expression"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "5\n",
+        "stderr": ""
+      }
+    }
+  ]
+}
