@@ -1,0 +1,21 @@
+fun main() {
+  print 2 + 3 * 4;
+  print 10 - 3 - 2;
+}
+// ---------------------------------------------------------------------------
+// w07_arithmetic.mini  (PDF section 7, saved there as arithmetic.mini)
+// precedence and left associativity.
+//
+// Try:  minic ast w07/w07_arithmetic.mini ->
+//         (print (binary + (number 2) (binary * (number 3) (number 4))))
+//         (print (binary - (binary - (number 10) (number 3)) (number 2)))
+//       minic run w07/w07_arithmetic.mini -> 14
+//                                            5
+//
+// Before the edit: tokens works, everything else fails with
+//   "w07/w07_arithmetic.mini:2:11: parse: TODO WEEK07: implement addition and
+//   subtraction parsing" (at the first +).
+//
+// 14, not 20: term() reads its right operand with factor(), so 3 * 4 is one
+// operand of +.
+// 5, not 9: the loop puts (10 - 3) on the left of the second -.

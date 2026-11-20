@@ -1,0 +1,9 @@
+fun main() { print 3 * 4; }
+// ---------------------------------------------------------------------------
+// w07_multiplication.mini  (PDF section 8, saved there as multiplication.mini)
+// baseline: multiplication was already supplied.
+//
+// Try:  minic run w07/w07_multiplication.mini -> 12
+//
+// Same result before AND after the edit. term() reads 3 * 4 with factor(),
+// sees no + or -, and returns it unchanged.

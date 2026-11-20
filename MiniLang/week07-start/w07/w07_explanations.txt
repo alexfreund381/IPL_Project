@@ -1,0 +1,52 @@
+Week 07 Explanations
+
+1. Before and after
+
+Before: print 3 * 4 worked (12), because factor() was supplied. Any + or -
+failed in the parse phase. 2 + 3 * 4 gave "TODO WEEK07: implement addition and
+subtraction parsing", and -2 gave "TODO WEEK07: implement unary operator
+parsing". tokens still worked, so valid tokens did not mean the parser worked.
+After: the acceptance program prints 14 and 5, (2 + 3) * 4 prints 20, and
+20 - 3 - 2 + 4 - 1 prints 18. 3 * 4 still prints 12.
+
+2. What I changed (src\parser.cpp) and why the order matters
+
+- term(): reads the first factor() as left. Then, while the next token is + or -,
+  it consumes the operator, reads the right operand with factor(), and makes
+  binaryExpression(left, op, right) the new left. It returns left at the end.
+  - A while, not an if: one if would leave the second - in 10 - 3 - 2 unread.
+  - The right side uses factor(), not term(): factor() keeps 3 * 4 together
+    (precedence), and using term() would build 10 - (3 - 2) = 9 instead of
+    (10 - 3) - 2 = 5.
+- unary(): if the next token is ! or -, it consumes it and parses the operand
+  with unary() again, so --3 and !!true nest. The span runs from the operator
+  through the operand, and the child is owned with make_unique. Calling
+  primary() would reject --3, and calling expression() would make -2 * 3 + 10
+  into -(2 * 3 + 10).
+
+The parser only builds the tree. The numbers are computed later, when the
+generated C++ runs.
+
+Edge cases: 2 + 3 * 4 = 14 and 10 - 3 - 2 = 5 (precedence and association).
+(2 + 3) * 4 = 20 (grouping). 20 - 3 - 2 + 4 - 1 = 18 (a long chain needs the
+loop). -2 * 3 + 10 = 4, 10 - -3 = 13, --3 = 3, !!true = true (unary binds
+tightest and repeats). 8 / 2 is still rejected, because division is not part of
+this stage. The supplied and/or short-circuiting still works.
+
+3. A rejected example
+
+print !1; passes check, but run fails: "runtime: operand of '!' must be bool",
+exit 1. Scanning, parsing, resolving and code generation all succeed, because
+!1 is a well-formed expression. The error comes from the runtime when the
+generated program executes. That is expected: the parser checks structure, not
+value types, so unary() must not try to evaluate its operand.
+(print 8 / 2; is rejected earlier, in the parse phase: "expected ';' after print
+value". / is tokenized, but factor() has no division rule.)
+
+4. Precedence, iteration and recursion
+
+Precedence comes from which function reads which: term() calls factor(),
+factor() calls unary(), and unary() calls primary(). Lower functions bind
+tighter, so * sits inside + and unary - sits inside *. Left associativity comes
+from the loop in term(), which keeps folding the tree built so far into the left
+side. Repeated prefixes come from unary() calling itself.

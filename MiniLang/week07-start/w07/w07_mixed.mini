@@ -1,0 +1,15 @@
+fun main() { var a = 5; print -a + 2 * 3 - 1; }
+// ---------------------------------------------------------------------------
+// w07_mixed.mini - my own example: unary, *, + and - together, with a variable.
+//
+// Prediction: the unary - binds tightest (-a), * next (2 * 3), and then + and -
+// left to right: ((-a) + (2 * 3)) - 1 = (-5 + 6) - 1 = 0.
+//
+// Try:  minic ast w07/w07_mixed.mini ->
+//         (print (binary - (binary + (unary - (variable a))
+//                                    (binary * (number 2) (number 3)))
+//                          (number 1)))
+//       minic run w07/w07_mixed.mini -> 0
+//
+// Before the edit: "parse: TODO WEEK07: implement unary operator parsing" at
+// the -a (unary() is reached before term() sees the +).

@@ -1,0 +1,14 @@
+fun main() { print (2 + 3) * 4; }
+// ---------------------------------------------------------------------------
+// w07_grouped.mini  (PDF section 8, saved there as grouped.mini)
+// parentheses override precedence.
+//
+// Try:  minic ast w07/w07_grouped.mini ->
+//         (print (binary * (group (binary + (number 2) (number 3))) (number 4)))
+//       minic run w07/w07_grouped.mini -> 20
+//
+// Before the edit: "parse: TODO WEEK07: implement addition and subtraction
+// parsing", at the + inside the parentheses.
+//
+// The group is a primary expression, so factor() treats (2 + 3) as one operand
+// of *. Compare 2 + 3 * 4 in w07_arithmetic.mini, which gives 14.

@@ -235,11 +235,16 @@ private:
 
   Expression term() {
     auto left = factor();
-    if (check(TokenKind::Plus) || check(TokenKind::Minus)) {
-      // TODO WEEK07: Replace this guard with a loop building a left-associated
-      // binary expression. Read the right operand with factor().
-      throw CompileError(Phase::Parse, source_.name(), peek().span,
-                         "TODO WEEK07: implement addition and subtraction parsing");
+    // A loop (not an if) so chains like 20 - 3 - 2 + 4 are all consumed.
+    while (check(TokenKind::Plus) || check(TokenKind::Minus)) {
+      const auto &operator_token = advance();
+      const auto operation = operator_token.kind == TokenKind::Plus
+                                 ? BinaryOperator::Add
+                                 : BinaryOperator::Subtract;
+      // factor(), so 3 * 4 stays together as one operand.
+      auto right = factor();
+      // The tree built so far becomes the left side: (10 - 3) - 2.
+      left = binaryExpression(std::move(left), operation, std::move(right));
     }
     return left;
   }
@@ -256,10 +261,17 @@ private:
 
   Expression unary() {
     if (check(TokenKind::Bang) || check(TokenKind::Minus)) {
-      // TODO WEEK07: consume the operator, recursively parse its operand,
-      // and return a unary node with the complete source span.
-      throw CompileError(Phase::Parse, source_.name(), peek().span,
-                         "TODO WEEK07: implement unary operator parsing");
+      const auto &operator_token = advance();
+      const auto operation = operator_token.kind == TokenKind::Bang
+                                 ? UnaryOperator::LogicalNot
+                                 : UnaryOperator::Negate;
+      // unary() again, so --3 and !!true nest; not expression(), which would take - 3 + 1 whole.
+      auto operand = unary();
+      // Span runs from the operator through the end of its operand.
+      const auto span = spanFrom(operator_token.span, operand.span);
+      return Expression{
+          span, UnaryExpression{operation,
+                                std::make_unique<Expression>(std::move(operand))}};
     }
     return primary();
   }
