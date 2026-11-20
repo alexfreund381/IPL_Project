@@ -1,0 +1,7 @@
+fun main() {
+  if (true) {
+    for (var i = 0; i < 2; i = i + 1) { print i; }
+  } else {
+    for (var j = 2; j < 4; j = j + 1) { print j; }
+  }
+}

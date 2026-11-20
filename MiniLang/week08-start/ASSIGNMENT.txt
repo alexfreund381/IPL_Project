@@ -1,0 +1,265 @@
+WEEK 08 — Lowering for loops while preserving scope
+
+This exercise builds on control-flow theory.
+
+Complete the task in your starting project. When the solution is provided,
+use it to compare your implementation after making your own attempt.
+This assignment describes the same exercise in both versions.
+
+GOAL AND LECTURE CONNECTION
+
+Connect structured control flow to an AST transformation. A for loop can be
+represented by an outer block and an internal while loop, without changing
+the order of execution or the visibility of local variables. Your task is to
+assemble that structure, not to execute the loop inside the compiler.
+C++ std::move transfers ownership of compiler AST nodes; it does not move
+values between variables in a running Mini program.
+
+STARTING POINT AND PROVIDED INFRASTRUCTURE
+
+Your starting project already parses numeric expressions, if/else and for.
+It includes AST nodes, source spans, scope resolution and code generation
+for branches and the internal while node. The recursive statement lowerer
+is your task: blocks, if and for parse, but stop at its TODO before execution.
+A for header requires var initialization, a condition, and an assignment
+update; its body must be a block. Public while syntax, break and continue
+are not part of Mini. Only fun main() is available in this checkpoint.
+Division and string concatenation are still unavailable.
+The supplied lowerStatements helper visits a vector and replaces each element
+with lowerStatement's result. The public lower() applies it to main_body.
+You will complete lowerStatement itself. Ordinary statements pass through in
+the start; any block, if or for deliberately stops at the missing visitor.
+
+YOUR C++ TASK
+
+File: src/lower.cpp
+Function: lowerStatement(Statement statement), complete body
+Find: TODO WEEK08: implement recursive statement lowering
+
+1. For a BlockStatement, call the supplied lowerStatements on its statements
+   and return the updated original statement. Keep the block node intact.
+2. For an IfStatement, move its then branch through lowerStatement and assign
+   the result back to the owned child. If an else branch exists, do the same
+   for it. Return the updated if. Visit both syntax branches; do not evaluate
+   the condition or choose a runtime branch inside the compiler.
+3. For a ForStatement, save statement.span. Move the initializer and update
+   statements out of their pointers and move the condition expression.
+   Move the original body through lowerStatement to transform nested loops.
+4. Create a vector for the synthetic while body. Append the lowered original
+   body as one complete BlockStatement, then the update, using std::move.
+   Never splice out the original body's children.
+5. Wrap that vector in a BlockStatement using the loop span. Construct a
+   WhileStatement from the moved condition and an owned pointer to this
+   synthetic body; wrap it in a Statement with the same span.
+6. Create an outer vector containing the initializer then the while statement.
+   Return it as a BlockStatement wrapped in a Statement with the saved span.
+7. For all other statement nodes, return the original statement unchanged.
+   Keep the method signature, lowerStatements helper and public lower().
+8. Remove the TODO throw/comments and now-unused #include <stdexcept>.
+
+This is one complete recursive visitor. It transforms syntax, not runtime
+values. The initializer runs
+once, the condition precedes each iteration, and the original body runs before
+the update. The update is outside that body's scope. The outer block limits
+the initializer variable to the loop. A body-local name may shadow the counter
+without capturing the update. Earlier name resolution work remains unchanged.
+
+BUILD AND RUN THE PROVIDED CHECKPOINT
+
+Use your existing course/IDE build. In commands below, minic means the
+executable from your rebuilt project, for example ./build/minic. Replace
+minic with your actual executable path; it need not be on PATH.
+Run these commands from the package root containing CMakeLists.txt.
+Rebuild after C++ edits:
+  cmake --build <your-build-directory> --config Debug
+or use IDE Build. Use the build directory belonging to this stage's project.
+The run command also compiles generated C++ with the configured host compiler.
+
+The inputs/ directory contains all .mini files named below. Their complete
+contents are printed here too. Keep the supplied names for CHECK_PROJECT.py.
+The Python checker uses only the standard library; Python does not build the
+C++ compiler. Build minic first and use your actual executable path:
+  ./build/minic run inputs/starting_point.mini
+  python3 CHECK_PROJECT.py --mode start --compiler ./build/minic
+
+After editing and rebuilding, use the completion expectations:
+  python3 CHECK_PROJECT.py --mode solution --compiler ./build/minic
+
+PASS means the observed result matches the expected result, including an
+expected error and its exit status. In start mode, this confirms that the
+unchanged starter behaves as described. After all solution checks pass,
+try an example of your own and explain its result.
+The tables in checks/CASES.json define the same executable expectations.
+
+A. STARTING POINT: AN ORDINARY STATEMENT PASSES THROUGH
+
+Provided inputs/starting_point.mini:
+    fun main() { print 7; }
+
+  minic run inputs/starting_point.mini
+
+Both versions print 7 followed by a newline and exit 0. The PrintStatement
+passes through lowering unchanged; main_body is visited by the supplied helper.
+stderr is empty in both versions.
+
+B. ACCEPTANCE: OBSERVE THE TWO DIFFERENT TREES
+
+Provided inputs/acceptance.mini:
+    fun main() {
+      for (var i = 0; i < 3; i = i + 1) { print i; }
+    }
+
+  minic ast inputs/acceptance.mini
+  minic lower inputs/acceptance.mini
+  minic check inputs/acceptance.mini
+  minic cpp inputs/acceptance.mini
+  minic run inputs/acceptance.mini
+
+Before the edit, ast succeeds, exit 0, and shows a for node. The other four
+commands have empty stdout and report exactly this stderr line:
+  internal: TODO WEEK08: implement recursive statement lowering
+Their exit status is 70. This is an intentional internal-error placeholder,
+not a parse error in the sample.
+
+After the edit, ast still shows for. lower instead shows an outer block with
+var followed by while; the while body has the original block followed by
+the assignment update. No for node remains in the lower dump. check is silent,
+exit 0. cpp prints C++ text including while (true), not the program's result.
+run prints exactly these lines and exits 0:
+  0
+  1
+  2
+
+C. THE BODY BLOCK MUST KEEP ITS OWN SCOPE
+
+Provided inputs/shadow.mini:
+    fun main() {
+      var rounds = 0;
+      for (var i = 0; i < 2 and rounds < 3; i = i + 1) {
+        var i = 99;
+        print i;
+        rounds = rounds + 1;
+      }
+    }
+
+  minic lower inputs/shadow.mini
+  minic check inputs/shadow.mini
+  minic run inputs/shadow.mini
+
+Start: each reaches the lowering TODO, empty stdout, exit 70.
+Completed: lower retains the body block; check is silent, exit 0; run prints
+99 twice on separate lines and exits 0. The update changes the outer i, not
+the body-local i. rounds is a safety counter: if an incorrect flattened body
+captures the update, it bounds this diagnostic example to three iterations.
+It is not part of the lowering algorithm. Keep the checker's timeout too.
+
+D. THE LOOP COUNTER MUST NOT ESCAPE
+
+Provided inputs/outside.mini:
+    fun main() {
+      for (var i = 0; i < 1; i = i + 1) { print i; }
+      print i;
+    }
+
+  minic check inputs/outside.mini
+
+Start: lowering TODO, empty stdout, exit 70.
+Completed: location-bearing resolve error containing unknown variable 'i',
+empty stdout, exit 1. The whole program is rejected before any print runs.
+
+E. RECURSIVE LOWERING WITH NESTED LOOPS AND A BRANCH
+
+Provided inputs/nested.mini:
+    fun main() {
+      for (var i = 0; i < 2; i = i + 1) {
+        for (var j = 0; j < 2; j = j + 1) {
+          if (j == 1) { print i * 10 + j; } else { print i * 10; }
+        }
+      }
+    }
+
+  minic run inputs/nested.mini
+
+Start: lowering TODO, empty stdout, exit 70.
+Completed: stdout is 0, 1, 10, 11 on separate lines; exit 0. Both loops must
+be transformed. Your recursive body call must transform the inner loop; your
+visitor must also traverse its if branches.
+
+F. CHECK THE CONDITION BEFORE ENTERING THE BODY
+
+Provided inputs/zero_iterations.mini:
+    fun main() {
+      for (var i = 3; i < 3; i = i + 1) { print 99; }
+      print 9;
+    }
+
+  minic run inputs/zero_iterations.mini
+
+Start: lowering TODO, empty stdout, exit 70.
+Completed: stdout is only 9 followed by a newline; exit 0. The first condition
+is false, so neither the loop body nor its update executes.
+
+G. LOOPS INSIDE BOTH BRANCHES OF IF
+
+Provided inputs/for_in_if.mini:
+    fun main() {
+      if (true) {
+        for (var i = 0; i < 2; i = i + 1) { print i; }
+      } else {
+        for (var j = 2; j < 4; j = j + 1) { print j; }
+      }
+    }
+
+  minic lower inputs/for_in_if.mini
+  minic run inputs/for_in_if.mini
+
+Start: both reach the lowering TODO, empty stdout, exit 70.
+Completed lower contains a while for i and another for j, with no for nodes.
+Both syntax branches must be transformed even though only one will execute.
+Completed run prints 0 and 1 on separate lines, empty stderr, exit 0.
+Your if traversal must reach both loops; your for transformation handles them.
+
+H. BLOCK AND BRANCH TRAVERSAL ARE PART OF THIS EXERCISE
+
+Provided inputs/block.mini:
+    fun main() { { print 7; } }
+
+Provided inputs/branch.mini:
+    fun main() {
+      if (true) { print 7; } else { print 8; }
+      if (false) { print 9; }
+    }
+
+  minic run inputs/block.mini
+  minic run inputs/branch.mini
+
+Start: each has empty stdout and the lowering TODO on stderr, exit 70.
+Completed: each prints 7 and a newline, empty stderr, exit 0. Preserve the
+block while visiting its contents. Traverse both if children during lowering;
+only the chosen branch executes later. The second if has no else and its
+false condition must skip print 9. Check for a null else pointer before
+visiting it.
+
+DONE CHECKLIST
+
+[ ] Blocks and both if branches are recursively visited; other nodes pass through.
+[ ] The for rewrite moves its components and constructs both blocks and while.
+[ ] Body/update and initializer/while order are preserved.
+[ ] The body is recursively lowered and stays nested; the TODO scaffold is gone.
+[ ] ast retains for, lower removes it, and acceptance prints 0, 1, 2.
+[ ] Shadowing prints 99 twice; the counter outside the loop is rejected.
+[ ] Nested loops, both if branches and the zero-iteration case match their outputs.
+[ ] I can explain the two scope boundaries, ownership moves and recursive call.
+[ ] The solution-mode checker passes, including the expected resolve rejection.
+
+WHAT COMES NEXT
+
+When the solution is provided, compare the complete recursive visitor and
+read its READ_ME.txt for the scope trace. You can complete and check this exercise
+using only the source, inputs and checker in this package.
+
+In Stage09 we will study functions, parameters, calls and return values.
+We will use a starting project with function parsing and resolution connected,
+and lowering visiting each function body. The exercise will complete parameter
+emission, ordered argument emission and explicit returns. Keep this loop
+transformation intact; adding function support is not part of this task.

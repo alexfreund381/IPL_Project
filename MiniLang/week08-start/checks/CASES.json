@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "week": 8,
+  "acceptance_description": "Implement the complete recursive lowerStatement visitor: transform block contents and both if branches, rewrite each for into scoped blocks and an internal while, and preserve ordinary statements. Baseline print 7 runs in both modes. A block and if/else run after completion. Preserve body/update and initializer/while order, body shadowing, loop-counter scope, nested loops, loops in both if branches and zero iterations.",
+  "fixture_sha256": {
+    "starting_point.mini": "0cdecdda258b84ee82414b4966f828fee01dc6ecb689c5c29ef03c3a3c0cff0c",
+    "acceptance.mini": "d280d7a189c152bff1ccdeb17b850518662ee2765c0112a9fdbbfd4a8a181721",
+    "shadow.mini": "f1c7cea9f14733611bc4da4512f26af05ac5daf847dbefce5a43ba3b73000ffe",
+    "outside.mini": "f3e52400339d661142fa92927416c81a886fefc6fa141fdcd0f7218987003355",
+    "nested.mini": "43e5ceec271b539983b3a3d2126a9a49ad037dc7c541d185f18e2d2b33062e0a",
+    "zero_iterations.mini": "b2cc2e60cd70cadd8d686f38cf3189ab7c1bd83686c25b369cb3e3f7fd2eeeaf",
+    "for_in_if.mini": "42666db777aa37012efc6c7b936104d65064f97525cac659d20a23d2861c51d5",
+    "block.mini": "2df13378211c70e09c85de9f5976c82bcdb3b0f1f944f8ef51acda411d5e919a",
+    "branch.mini": "66afe929a3a9986e27cee5aaa9539bc79c4d49a041c998f8617ad5bc4d1cf7d9"
+  },
+  "checks": [
+    {
+      "id": "baseline-run",
+      "file": "starting_point.mini",
+      "command": "run",
+      "start": {
+        "exit": 0,
+        "stdout": "7\n",
+        "stderr": ""
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "7\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-ast",
+      "file": "acceptance.mini",
+      "command": "ast",
+      "start": {
+        "exit": 0,
+        "stdout_contains": [
+          "(for\n",
+          "(var i (number 0))",
+          "(assign i (binary + (variable i) (number 1)))"
+        ],
+        "stderr": ""
+      },
+      "solution": {
+        "exit": 0,
+        "stdout_contains": [
+          "(for\n",
+          "(var i (number 0))",
+          "(assign i (binary + (variable i) (number 1)))"
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-lower",
+      "file": "acceptance.mini",
+      "command": "lower",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout_contains": [
+          "(block\n",
+          "(var i (number 0))",
+          "(while (binary < (variable i) (number 3))",
+          "(assign i (binary + (variable i) (number 1)))"
+        ],
+        "stderr": "",
+        "stdout_not_contains": "(for\n"
+      }
+    },
+    {
+      "id": "acceptance-check",
+      "file": "acceptance.mini",
+      "command": "check",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-cpp",
+      "file": "acceptance.mini",
+      "command": "cpp",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout_contains": [
+          "while (true) {",
+          "\"for condition\"",
+          "mini::addValues("
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-run",
+      "file": "acceptance.mini",
+      "command": "run",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "0\n1\n2\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "body-scope-shadow",
+      "file": "shadow.mini",
+      "command": "run",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "99\n99\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "loop-variable-does-not-escape",
+      "file": "outside.mini",
+      "command": "check",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "resolve: unknown variable 'i'"
+      }
+    },
+    {
+      "id": "nested-loops-and-if",
+      "file": "nested.mini",
+      "command": "run",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "0\n1\n10\n11\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "condition-before-first-body",
+      "file": "zero_iterations.mini",
+      "command": "run",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "9\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "for-inside-if-lower",
+      "file": "for_in_if.mini",
+      "command": "lower",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout_contains": [
+          "(if (bool true)",
+          "(while (binary < (variable i) (number 2))",
+          "(while (binary < (variable j) (number 4))"
+        ],
+        "stdout_not_contains": "(for\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "for-inside-if-run",
+      "file": "for_in_if.mini",
+      "command": "run",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "0\n1\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "block-traversal-run",
+      "file": "block.mini",
+      "command": "run",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "7\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "branch-traversal-run",
+      "file": "branch.mini",
+      "command": "run",
+      "start": {
+        "exit": 70,
+        "stdout": "",
+        "stderr": "internal: TODO WEEK08: implement recursive statement lowering\n"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "7\n",
+        "stderr": ""
+      }
+    }
+  ]
+}

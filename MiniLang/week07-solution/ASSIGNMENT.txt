@@ -1,0 +1,246 @@
+WEEK 07 — Expression precedence and left associativity
+
+This exercise builds on expression theory.
+
+Complete the task in your starting project. When the solution is provided,
+use it to compare your implementation after making your own attempt.
+This assignment describes the same exercise in both versions.
+
+GOAL AND LECTURE CONNECTION
+
+Complete two connected parts of a recursive-descent expression parser. Connect
+grammar and syntax trees to the way C++ functions consume tokens: an additive
+loop builds left association, while unary recursion nests prefix operators.
+Multiplication must bind more tightly than addition and subtraction. Repeated
+subtraction must build a left-associated tree: (10 - 3) - 2, giving 5.
+The parser constructs this tree; generated code and the runtime later compute
+its value. Do not calculate the answer inside the parser.
+
+STARTING POINT AND PROVIDED INFRASTRUCTURE
+
+Your starting project already includes variables, assignments and block scopes.
+The lexer, AST nodes, other precedence levels, resolver, expression code
+generator and runtime are ready to use.
+The supplied factor() parses multiplication. Comparisons, equality and
+short-circuit and/or are already implemented. Unary AST nodes and their
+later-phase support are supplied, but unary - and ! parsing is your task.
+Short-circuit execution belongs to the supplied generator, not to term().
+The missing parts are the binary +/- loop in Parser::term() and the prefix
+operator branch in Parser::unary(). Other inputs pass through these levels.
+Only fun main() is supported here; general functions and calls come later.
+There are no if/for statements yet. Division is unavailable, and + accepts
+only two numbers. The lexer's token set and general --help text do not promise
+that this checkpoint supports every feature of the final language.
+
+YOUR C++ TASK
+
+File: src/parser.cpp
+Functions: Parser::term() and Parser::unary()
+Find: TODO WEEK07: implement addition and subtraction parsing
+      TODO WEEK07: implement unary operator parsing
+
+Part 1: additive loop in term()
+
+1. Keep the first call to factor() and store its tree as the current left side.
+2. Replace the single TODO guard with repetition while the next token is Plus
+   or Minus. Stop without consuming the first token from another grammar level.
+3. Consume the operator with advance(). Select BinaryOperator::Add for Plus
+   and BinaryOperator::Subtract for Minus.
+4. Read the right operand with factor(), not term() or expression(). This
+   leaves multiplication inside an operand and avoids right-associative -.
+5. Use binaryExpression to make a new tree from the current left tree, the
+   selected operator and the right tree. Transfer the operand trees with
+   std::move and make the new tree the current left side.
+6. Repeat for another + or -. Return the accumulated left tree when finished.
+   Remove the placeholder throw; simply deleting the throw is not a solution.
+
+Part 2: recursive prefix branch in unary()
+
+7. If the next token is Bang or Minus, consume it with advance(). Select
+   UnaryOperator::LogicalNot for Bang or UnaryOperator::Negate for Minus.
+8. Parse the operand with unary(), so --3 and !!true nest correctly. Do not
+   call expression(): a prefix operator must not absorb an additive suffix.
+9. Form a span from the operator token through the returned operand. Return
+   an Expression containing a UnaryExpression with that operation and an
+   owned child created with std::make_unique and std::move.
+10. Keep the existing return primary() when there is no prefix operator.
+    Remove both TODO throws and their completed comments.
+
+Keep factor(), binaryExpression(), the other precedence functions and runtime
+unchanged. The binary helper supplies spans and owns both children. In the
+unary branch you construct its single owned child and span yourself. Keep the
+provided function signatures and pass-through statements.
+A single if cannot consume an additive chain. A single primary() operand
+cannot consume repeated unary prefixes. Neither algorithm evaluates a value.
+
+BUILD AND RUN THE PROVIDED CHECKPOINT
+
+Use your existing course/IDE build. In commands below, minic means the
+executable from your rebuilt project, for example ./build/minic. Replace
+minic with your actual executable path; it need not be on PATH.
+Run these commands from the package root containing CMakeLists.txt.
+Rebuild after C++ edits:
+  cmake --build <your-build-directory> --config Debug
+or use IDE Build. Use the build directory belonging to this stage's project.
+The run command also compiles generated C++ with the configured host compiler.
+
+The inputs/ directory contains all .mini files named below. Their complete
+contents are printed here too. Keep the supplied names for CHECK_PROJECT.py.
+The Python checker uses only the standard library; Python does not build the
+C++ compiler. Build minic first and use your actual executable path:
+  ./build/minic run inputs/starting_point.mini
+  python3 CHECK_PROJECT.py --mode start --compiler ./build/minic
+
+After editing and rebuilding, use the completion expectations:
+  python3 CHECK_PROJECT.py --mode solution --compiler ./build/minic
+
+PASS means the observed result matches the expected result, including an
+expected error and its exit status. In start mode, this confirms that the
+unchanged starter behaves as described. After all solution checks pass,
+try an example of your own and explain its result.
+The tables in checks/CASES.json define the same executable expectations.
+
+A. STARTING POINT: MULTIPLICATION ALREADY WORKS
+
+Provided inputs/starting_point.mini:
+    fun main() { print 3 * 4; }
+
+  minic run inputs/starting_point.mini
+
+Before and after the edit: stdout is 12 followed by a newline; exit 0.
+stderr is empty in both versions.
+
+B. ACCEPTANCE: PRECEDENCE AND LEFT ASSOCIATIVITY
+
+Provided inputs/acceptance.mini:
+    fun main() { print 2 + 3 * 4; print 10 - 3 - 2; }
+
+  minic tokens inputs/acceptance.mini
+  minic ast inputs/acceptance.mini
+  minic lower inputs/acceptance.mini
+  minic check inputs/acceptance.mini
+  minic cpp inputs/acceptance.mini
+  minic run inputs/acceptance.mini
+
+Before the edit, tokens succeeds with PLUS, STAR, MINUS and EOF tokens.
+Every later command stops at the first + with a location-bearing parse error:
+  TODO WEEK07: implement addition and subtraction parsing
+Its exit status is 1 and stdout is empty. Valid tokens alone do not establish
+that the parser level works.
+
+After the edit, ast puts multiplication inside the right operand of + and
+puts (10 - 3) on the left of the second -. lower shows the same tree because
+this stage has no lowering rewrite. check is silent, exit 0. cpp produces
+C++ text with multiplyValues, addValues and subtractValues, not Mini stdout.
+run must print exactly these two lines and exit 0:
+  14
+  5
+
+C. GROUPING OVERRIDES DEFAULT PRECEDENCE
+
+Provided inputs/grouped.mini:
+    fun main() { print (2 + 3) * 4; }
+
+  minic ast inputs/grouped.mini
+  minic run inputs/grouped.mini
+
+Start: both reach the WEEK07 parse TODO, empty stdout, exit 1.
+Completed: ast contains a group around the sum, then multiplication by 4;
+run prints 20 followed by a newline, exit 0. The parentheses change the tree.
+
+D. MORE THAN TWO ADDITIVE OPERATORS
+
+Provided inputs/chain.mini:
+    fun main() { print 20 - 3 - 2 + 4 - 1; }
+
+  minic run inputs/chain.mini
+
+Start: WEEK07 parse TODO, empty stdout, exit 1.
+Completed: stdout is 18 followed by a newline; exit 0.
+The sequence is 20 - 3 = 17, then 15, then 19, then 18. One if statement
+cannot consume the whole chain; right recursion can produce a wrong tree.
+
+E. DIVISION IS STILL OUTSIDE THIS STAGE
+
+Provided inputs/unsupported_division.mini:
+    fun main() { print 8 / 2; }
+
+  minic check inputs/unsupported_division.mini
+
+Both versions reject it with a location-bearing parse diagnostic containing
+expected ';' after print value, empty stdout and exit 1. Slash is tokenized,
+but factor() does not accept division. Do not implement it to make this pass.
+
+F. KEEP SUPPLIED SHORT-CIRCUIT EVALUATION
+
+Provided inputs/short_circuit.mini:
+    fun main() {
+      print false and (1 < "wrong");
+      print true or (1 < "wrong");
+    }
+
+  minic run inputs/short_circuit.mini
+
+Both versions print false and true on separate lines, exit 0. Neither right
+comparison executes; executing it would produce a runtime type error. This
+is a regression check of supplied behavior, not another implementation task.
+
+G. UNARY PRECEDENCE AND REPEATED PREFIXES
+
+Provided inputs/unary.mini:
+    fun main() {
+      print -2 * 3 + 10;
+      print 10 - -3;
+      print --3;
+      print !!true;
+    }
+
+  minic ast inputs/unary.mini
+  minic run inputs/unary.mini
+
+Start: the first unary minus reaches a location-bearing parse diagnostic
+containing TODO WEEK07: implement unary operator parsing; stdout is empty,
+exit 1. Completed ast nests unary - inside multiplication, distinguishes the
+binary minus from its unary right operand, and nests both repeated prefixes.
+Completed run prints these lines, has empty stderr, and exits 0:
+  4
+  13
+  3
+  true
+
+H. PARSING AN OPERATOR DOES NOT CHECK ITS RUNTIME VALUE TYPE
+
+Provided inputs/unary_type.mini:
+    fun main() { print !1; }
+
+  minic check inputs/unary_type.mini
+  minic run inputs/unary_type.mini
+
+Start: both commands reach the unary parse TODO, empty stdout, exit 1.
+Completed check is silent, exit 0. Completed run has empty stdout, exit 1,
+and exactly this stderr line:
+  runtime: operand of '!' must be bool
+The parser accepts the expression structure; the supplied runtime rejects
+using logical negation on a number. Do not add type evaluation to unary().
+
+DONE CHECKLIST
+
+[ ] Only term() and unary() changed; both TODO branches are complete.
+[ ] Multiplication still prints 12; acceptance prints 14 and 5.
+[ ] Grouping prints 20, the mixed chain prints 18, and their ASTs explain why.
+[ ] Unary cases print 4, 13, 3, true; !1 passes check but fails at runtime.
+[ ] I can explain factor() precedence, additive iteration and unary recursion.
+[ ] The solution-mode checker passes, including expected division rejection.
+[ ] I did not add division, string concatenation, if/for or general functions.
+
+WHAT COMES NEXT
+
+When the solution is provided, compare your term() and unary() with the reference
+and read its READ_ME.txt for a worked trace. You can complete and check this
+exercise using only the source, inputs and checker in this package.
+
+In Stage08 we will study branches and for loops. We will use a starting project
+with their AST nodes, parsing and later-phase support already connected, then
+assemble the for-to-while transformation. Keep your completed work for comparison;
+you do not need to add that infrastructure here. String + comes in Stage11
+and division in Stage12.
