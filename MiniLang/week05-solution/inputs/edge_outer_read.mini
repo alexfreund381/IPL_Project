@@ -1,0 +1,1 @@
+fun main() { var original = 5; { var copy = original; print copy; } }

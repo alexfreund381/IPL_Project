@@ -1,0 +1,4 @@
+fun main() {
+  print false and (1 < "wrong");
+  print true or (1 < "wrong");
+}

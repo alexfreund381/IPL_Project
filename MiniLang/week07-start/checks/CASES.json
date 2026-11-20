@@ -1,0 +1,282 @@
+{
+  "schema_version": 1,
+  "week": 7,
+  "acceptance_description": "Keep supplied multiplication and short-circuit evaluation working; implement additive iteration and recursive unary -/! parsing. Acceptance prints 14 then 5; grouping prints 20 and the longer additive chain 18. Unary precedence, binary-minus versus unary-minus and repeated prefixes print 4, 13, 3, true with matching AST shapes. !1 passes check but fails at runtime. Division remains a parse error. A start-mode PASS includes matched TODO errors, not completion.",
+  "fixture_sha256": {
+    "starting_point.mini": "88f320fa286ef2a633031e7aa5ece31327b24dbdb08f2b08dad7aa3635325d8a",
+    "acceptance.mini": "beb49661835c87f1f18a3c23ad75e4c319c308642e7664fbd3801edddfb8a1f2",
+    "grouped.mini": "02607396b835644ea8b851f428da21e3e57c1baa39149386e720528935ecc9cf",
+    "chain.mini": "30ccf92ad94bb2812f261675f4721daca1bc982cf10c109a976f368def6df9fc",
+    "unsupported_division.mini": "b92cc732bea989b568e0bb4e1e13c09445c880034ad25f0198c0391a0747de61",
+    "short_circuit.mini": "dacdb2e54fc68e5f4802df8f69f406f57fb7da13e12c38fde6592c8236db65ed",
+    "unary.mini": "7c274505ed2cbd8e926290c6573f999f1705e3949662312c1d7da402692d537a",
+    "unary_type.mini": "8f6b3737f1e6147c42833409e2fccfb54950b64dc1730799260ac4a865e97bb5"
+  },
+  "checks": [
+    {
+      "id": "baseline-run",
+      "file": "starting_point.mini",
+      "command": "run",
+      "start": {
+        "exit": 0,
+        "stdout": "12\n",
+        "stderr": ""
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "12\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-tokens",
+      "file": "acceptance.mini",
+      "command": "tokens",
+      "start": {
+        "exit": 0,
+        "stdout_contains": [
+          "PLUS",
+          "STAR",
+          "MINUS",
+          "EOF"
+        ],
+        "stderr": ""
+      },
+      "solution": {
+        "exit": 0,
+        "stdout_contains": [
+          "PLUS",
+          "STAR",
+          "MINUS",
+          "EOF"
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-ast",
+      "file": "acceptance.mini",
+      "command": "ast",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement addition and subtraction parsing"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout_contains": [
+          "(binary + (number 2) (binary * (number 3) (number 4)))",
+          "(binary - (binary - (number 10) (number 3)) (number 2))"
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-lower",
+      "file": "acceptance.mini",
+      "command": "lower",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement addition and subtraction parsing"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout_contains": [
+          "(binary + (number 2) (binary * (number 3) (number 4)))",
+          "(binary - (binary - (number 10) (number 3)) (number 2))"
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-check",
+      "file": "acceptance.mini",
+      "command": "check",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement addition and subtraction parsing"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-cpp",
+      "file": "acceptance.mini",
+      "command": "cpp",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement addition and subtraction parsing"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout_contains": [
+          "mini::multiplyValues(",
+          "mini::addValues(",
+          "mini::subtractValues("
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "id": "acceptance-run",
+      "file": "acceptance.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement addition and subtraction parsing"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "14\n5\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "grouped-ast",
+      "file": "grouped.mini",
+      "command": "ast",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement addition and subtraction parsing"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout_contains": "(binary * (group (binary + (number 2) (number 3))) (number 4))",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "grouped-run",
+      "file": "grouped.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement addition and subtraction parsing"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "20\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "chain-run",
+      "file": "chain.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement addition and subtraction parsing"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "18\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "division-not-supported",
+      "file": "unsupported_division.mini",
+      "command": "check",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: expected ';' after print value"
+      },
+      "solution": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: expected ';' after print value"
+      }
+    },
+    {
+      "id": "short-circuit-regression",
+      "file": "short_circuit.mini",
+      "command": "run",
+      "start": {
+        "exit": 0,
+        "stdout": "false\ntrue\n",
+        "stderr": ""
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "false\ntrue\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "unary-precedence-and-recursion-ast",
+      "file": "unary.mini",
+      "command": "ast",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement unary operator parsing"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout_contains": [
+          "(binary + (binary * (unary - (number 2)) (number 3)) (number 10))",
+          "(binary - (number 10) (unary - (number 3)))",
+          "(unary - (unary - (number 3)))",
+          "(unary ! (unary ! (bool true)))"
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "id": "unary-precedence-and-recursion-run",
+      "file": "unary.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement unary operator parsing"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "4\n13\n3\ntrue\n",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "unary-type-is-runtime-check",
+      "file": "unary_type.mini",
+      "command": "check",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement unary operator parsing"
+      },
+      "solution": {
+        "exit": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "unary-type-is-runtime-error",
+      "file": "unary_type.mini",
+      "command": "run",
+      "start": {
+        "exit": 1,
+        "stdout": "",
+        "stderr_contains": "parse: TODO WEEK07: implement unary operator parsing"
+      },
+      "solution": {
+        "exit": 1,
+        "stdout": "",
+        "stderr": "runtime: operand of '!' must be bool\n"
+      }
+    }
+  ]
+}
