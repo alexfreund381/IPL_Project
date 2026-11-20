@@ -1,0 +1,8 @@
+fun main() {
+  var rounds = 0;
+  for (var i = 0; i < 2 and rounds < 3; i = i + 1) {
+    var i = 99;
+    print i;
+    rounds = rounds + 1;
+  }
+}

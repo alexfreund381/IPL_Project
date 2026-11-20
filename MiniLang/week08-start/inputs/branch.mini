@@ -1,0 +1,4 @@
+fun main() {
+  if (true) { print 7; } else { print 8; }
+  if (false) { print 9; }
+}

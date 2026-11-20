@@ -1,0 +1,4 @@
+fun main() {
+  for (var i = 3; i < 3; i = i + 1) { print 99; }
+  print 9;
+}
