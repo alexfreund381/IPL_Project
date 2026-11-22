@@ -1,0 +1,19 @@
+fun main() {
+  for (var i = 0; i < 2; i = i + 1) { var last = i; }
+  print last;
+}
+// ---------------------------------------------------------------------------
+// w08_body_escape.mini - my own REJECTED example: a body-local name used
+// after the loop. (inputs/outside.mini does the same with the counter.)
+//
+// Try:  minic lower w08/w08_body_escape.mini -> works, exit 0: lowering only
+//         rearranges the tree
+//       minic check w08/w08_body_escape.mini ->
+//         "w08/w08_body_escape.mini:3:9: resolve: unknown variable 'last'"
+//         exit 1, nothing printed
+//
+// Before the edit: "internal: TODO WEEK08 ...", exit 70 (lowering fails
+// before the resolver is ever reached).
+//
+// last is declared inside the original body block, which is closed before
+// the outer block is, so print last finds no binding.

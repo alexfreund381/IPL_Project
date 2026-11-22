@@ -1,0 +1,31 @@
+fun main() {
+  for (var i = 0; i < 3; i = i + 1) { print i; }
+}
+// ---------------------------------------------------------------------------
+// w08_loop.mini  (PDF section 7, saved there as loop.mini)
+// the basic for loop, same program as inputs/acceptance.mini.
+//
+// Try:  minic ast   w08/w08_loop.mini -> still a (for ...) node
+//       minic lower w08/w08_loop.mini ->
+//         (block
+//           (var i (number 0))
+//           (while (binary < (variable i) (number 3))
+//             (block
+//               (block
+//                 (print (variable i))
+//               )
+//               (assign i (binary + (variable i) (number 1)))
+//             )
+//           )
+//         )
+//       minic cpp   w08/w08_loop.mini -> while (true) { ... break; ... }
+//       minic run   w08/w08_loop.mini -> 0
+//                                        1
+//                                        2
+//
+// Before the edit: ast works (exit 0), but lower/check/cpp/run all fail with
+//   "internal: TODO WEEK08: implement recursive statement lowering", exit 70.
+//
+// Three blocks: the outer one (holds i), the synthetic while body, and the
+// original body. The initializer runs once; the condition is tested before
+// every pass; print runs before the update.

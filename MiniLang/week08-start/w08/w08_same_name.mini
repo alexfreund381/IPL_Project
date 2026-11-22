@@ -1,0 +1,26 @@
+fun main() {
+  for (var i = 0; i < 2; i = i + 1) {
+    for (var i = 5; i < 7; i = i + 1) { print i; }
+    print i;
+  }
+}
+// ---------------------------------------------------------------------------
+// w08_same_name.mini - my own example: both loops use the name i.
+//
+// Prediction: the inner for's own outer block declares a new i (5, 6) that
+// hides the outer i. After the inner loop ends its i is gone, so the
+// following print i sees the outer counter (0, then 1).
+//
+// Try:  minic check w08/w08_same_name.mini -> silent, exit 0 (no duplicate:
+//         the two declarations are in different blocks)
+//       minic run   w08/w08_same_name.mini -> 5
+//                                             6
+//                                             0
+//                                             5
+//                                             6
+//                                             1
+//
+// Before the edit: "internal: TODO WEEK08 ...", exit 70.
+//
+// Each update binds to the i of its own loop, because each update sits next
+// to its own while, inside its own outer block.

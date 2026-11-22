@@ -1,0 +1,24 @@
+fun main() {
+  for (var i = 0; i < 2; i = i + 1) {
+    var i = 99;
+    print i;
+  }
+}
+// ---------------------------------------------------------------------------
+// w08_shadow.mini  (PDF section 8, saved there as shadow.mini)
+// a body-local i shadows the counter. This is the version WITHOUT the
+// rounds safety counter that inputs/shadow.mini has.
+//
+// Try:  minic lower w08/w08_shadow.mini -> the (block (var i 99) (print i))
+//         stays nested, and (assign i ...) comes after it
+//       minic run   w08/w08_shadow.mini -> 99
+//                                          99
+//
+// Before the edit: "internal: TODO WEEK08 ...", exit 70.
+//
+// The update i = i + 1 sits outside the original body block, so it binds to
+// the header i (0 -> 1 -> 2), not the inner i = 99. When I tested a broken
+// version that spliced the body's children into the while body, the update
+// bound to the inner i, the header i never changed, and this file printed 99
+// forever (I had to stop it). inputs/shadow.mini stops after 3 because of
+// rounds.

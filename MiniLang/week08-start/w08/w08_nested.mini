@@ -1,0 +1,27 @@
+fun main() {
+  for (var row = 1; row < 4; row = row + 1) {
+    for (var col = 1; col < row + 1; col = col + 1) {
+      print row * 10 + col;
+    }
+  }
+}
+// ---------------------------------------------------------------------------
+// w08_nested.mini - my own example: a nested loop whose inner condition reads
+// the outer counter (a triangle).
+//
+// Prediction: row = 1, 2, 3. For each row, col goes 1 .. row.
+//   row 1: 11
+//   row 2: 21 22
+//   row 3: 31 32 33
+//
+// Try:  minic lower w08/w08_nested.mini -> two (while ...) nodes, no (for ...).
+//         The inner (block (var col) (while ...)) sits inside the outer
+//         loop's original body block.
+//       minic run   w08/w08_nested.mini -> 11, 21, 22, 31, 32, 33 (one per line)
+//
+// Before the edit: "internal: TODO WEEK08 ...", exit 70.
+//
+// The inner loop is lowered by the recursive lowerStatement(body) call in the
+// for branch. Its outer block is created fresh on every pass of the outer
+// loop, so col starts again at 1 each row. row stays visible inside it
+// (outward lookup), and row's update is after the whole inner loop.

@@ -1,0 +1,88 @@
+Week 08 Explanations
+
+1. Before and after
+
+Before: print 7 worked (7), because an ordinary PrintStatement went straight
+through lowerStatement. Any block, if or for stopped at the TODO guard: ast
+still worked and showed the for node, but lower, check, cpp and run all gave
+"internal: TODO WEEK08: implement recursive statement lowering" with exit 70.
+That is the internal-error path (a std::logic_error caught in main.cpp), not a
+parse error, so the for syntax itself was already fine.
+After: the acceptance loop prints 0, 1, 2. ast still shows for, and lower shows
+an outer block with var and while instead. { print 7; } and the if/else
+examples print 7. shadow.mini prints 99 twice, the nested loops print 0, 1, 10,
+11, and using i after its loop is rejected by the resolver.
+
+2. What I changed (src\lower.cpp) and why the order matters
+
+lowerStatement() is now one recursive visitor with three branches, using
+get_if to reach each node's fields:
+- Block: call the supplied lowerStatements() on its vector and return the same
+  statement. The block node stays, because the resolver opens a scope for it.
+- If: move the then branch through lowerStatement() and store the result back
+  with make_unique. Do the same for else, but only if else_branch is not null
+  (if (false) { print 9; } has no else). Both branches are visited, because
+  lowering works on syntax; which branch runs is decided later, at runtime.
+- For: save statement.span, then move out the initializer, the condition and
+  the update, and lower the body with a recursive lowerStatement() call (this
+  is what turns an inner for into a while too). Then build:
+      while body  = [ lowered original body (one whole block), update ]
+      while       = WhileStatement{ condition, make_unique(while body) }
+      result      = block [ initializer, while ]
+  All three new statements use the saved span.
+- Anything else (print, var, assignment, expression) is returned unchanged.
+I also removed the TODO throw and #include <stdexcept>, which was only there
+for it.
+
+Why this order and nesting:
+- Initializer before while, inside an outer block: it runs once, and the
+  counter disappears when the outer block ends (outside.mini is rejected).
+- The condition is the while's own condition, so it is tested before the first
+  pass. zero_iterations.mini prints only 9: neither body nor update runs.
+- Body before update, and the body kept as ONE block: the update stays outside
+  the body's scope. If I splice the body's children into the while body
+  instead, var i = 99 and i = i + 1 end up in the same block, the update binds
+  to the inner i, and the header i never reaches 2. I tried this in a scratch
+  copy: w08_shadow.mini printed 99 forever, and inputs/shadow.mini printed 99
+  three times (stopped only by its rounds counter).
+- The recursive body call is needed for nested.mini; the if branch is needed for
+  for_in_if.mini, where the loop in the else branch must also be lowered even
+  though it never runs.
+
+std::move only hands ownership of compiler tree nodes to the new nodes; it does
+not move values in the Mini program. Lowering runs no loop: it visits each node
+once and builds a tree. The repetition happens in the generated C++, which is a
+while (true) that tests the condition and breaks when it is false.
+
+Edge cases: acceptance = 0, 1, 2. shadow = 99, 99 (body scope kept).
+outside = resolve error (counter scope limited). nested = 0, 1, 10, 11 (inner
+loop and if branches lowered). zero_iterations = 9 (condition first).
+for_in_if = 0, 1 and both loops lowered. block / branch = 7 (blocks kept, null
+else skipped). My own: w08_nested (triangle, 11 21 22 31 32 33) and
+w08_same_name (an inner loop that reuses i: 5 6 0 5 6 1).
+
+3. A rejected example
+
+w08_body_escape.mini declares var last inside the loop body and prints it after
+the loop. lower works (exit 0), but check fails with "resolve: unknown variable
+'last'" at 3:9, exit 1, nothing printed. The whole program is rejected before
+it runs. That is expected: last lives in the original body block, which is
+closed inside the while, so nothing after the loop can see it. outside.mini is
+the same idea one level up, with the counter and the outer block.
+(w08_condition_type.mini uses a number as the condition: it passes check, but
+run fails with "runtime: for condition must be bool", exit 1. Lowering and
+resolving check structure and names, not value types.)
+
+4. Recursion and the two scope boundaries
+
+lowerStatements() walks a vector and calls lowerStatement() on each element;
+lowerStatement() calls lowerStatements() for a block's contents and itself for
+if branches and loop bodies. So the visitor reaches every nested statement,
+however deep. A missing else is a null pointer and is simply skipped.
+
+The rewrite creates three blocks: the outer block, the synthetic while body,
+and the original body. Two of them matter for scope: the outer block keeps the
+counter alive for the whole loop and no longer, and the original body block
+keeps body-local names apart from the update. In w08_same_name.mini each for
+gets its own outer block, so the inner i (5, 6) hides the outer i only until the
+inner loop ends, and each update binds to its own counter.

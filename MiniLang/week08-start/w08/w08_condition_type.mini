@@ -1,0 +1,17 @@
+fun main() {
+  for (var i = 0; i; i = i + 1) { print i; }
+}
+// ---------------------------------------------------------------------------
+// w08_condition_type.mini - my own REJECTED example: the condition is a
+// number, not a bool.
+//
+// Try:  minic check w08/w08_condition_type.mini -> silent, exit 0
+//       minic run   w08/w08_condition_type.mini ->
+//         "runtime: for condition must be bool", exit 1, nothing printed
+//
+// Before the edit: "internal: TODO WEEK08 ...", exit 70.
+//
+// Lowering and the resolver only look at structure and names, so the
+// program is accepted. The generated C++ checks the value with requireBool
+// before the first pass, so the error happens when the program runs, before
+// print i.
