@@ -1,0 +1,66 @@
+Week 08 Explanations
+
+1. Before and after
+
+Before: print 7 worked, because ordinary statements pass through lowering.
+Any program with a block, if or for stopped in the lower phase with
+"internal: TODO WEEK08: implement recursive statement lowering", exit 70.
+ast still worked and showed the for node, so parsing for did not mean the
+compiler could build it.
+After: ast still shows for, but lower shows an outer block with var followed
+by while, and no for remains. The acceptance program prints 0, 1, 2. The
+shadow program prints 99 twice, print i after the loop is rejected with
+unknown variable 'i', nested loops print 0, 1, 10, 11, and the
+zero-iteration loop prints only 9.
+
+2. What I changed (src\lower.cpp) and why the shape matters
+
+- Block: lowerStatements on its statements, then return the same block.
+  The block node is kept, because it is the scope boundary for the resolver.
+- If: lowerStatement on then_branch and, if it is not null, else_branch, each
+  written back into the owned child. Both branches are visited because the
+  compiler does not know which one will run; for_in_if has a loop in each.
+- For: move out the initializer, condition and update, and send the body
+  through lowerStatement so inner loops are rewritten too. Then build
+    block { initializer; while (condition) block { body-block; update; } }
+  - The original body stays one whole block inside the while body. If I
+    spliced its children in, var i = 99 would sit in the same scope as the
+    update, so i = i + 1 would change the body's i and the loop would not
+    end (shadow.mini's rounds counter is the guard for that mistake).
+  - The update comes after the body, so the body runs before each update.
+  - The outer block makes the loop counter local to the loop, so print i
+    after the loop is a resolve error (outside.mini).
+  - The condition is the while condition, so it is checked before the first
+    iteration (zero_iterations.mini prints only 9).
+- Everything else is returned unchanged.
+
+std::move hands the AST nodes over to the new tree. Nothing is executed: the
+lowerer only rearranges syntax, and the generated C++ (while (true) with a
+break when the condition is false) runs the loop later.
+
+My own examples:
+- w08_sum.mini: total is declared outside the loop, so the body can update
+  it and print total sees 10.
+- w08_reuse.mini: two loops in a row both declare i. lower shows two
+  separate outer blocks, so the second var i is not a duplicate. Prints
+  0, 1, 5, 6.
+- w08_triple.mini: three nested loops and an if. Prints 0 and 111, only
+  when a, b and c are equal, so every level was lowered.
+
+3. A rejected example
+
+w08_body_name.mini uses i = i + step in the update, where step is declared
+inside the body. check fails: "resolve: unknown variable 'step'", exit 1.
+The update sits next to the body block inside the while, not inside it, so
+it cannot see the body's names. That is expected. It is the same boundary
+that keeps the body's var i from capturing the update in shadow.mini.
+
+4. Two scope boundaries, ownership and recursion
+
+The outer block is the first boundary: the initializer variable lives in it,
+so it is visible in the condition, body and update but not after the loop.
+The original body block is the second boundary: its names are visible only
+inside the body, not in the update. Ownership of each child moves out of the
+ForStatement into the new nodes with std::move. The recursive lowerStatement
+call on the body (and on blocks and both if branches) is what reaches loops
+at any depth.

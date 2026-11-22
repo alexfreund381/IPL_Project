@@ -8,7 +8,6 @@
 #include "lower.hpp"
 
 #include <memory>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -24,12 +23,43 @@ void lowerStatements(std::vector<Statement> &statements) {
 }
 
 Statement lowerStatement(Statement statement) {
-  if (std::holds_alternative<BlockStatement>(statement.node) ||
-      std::holds_alternative<IfStatement>(statement.node) ||
-      std::holds_alternative<ForStatement>(statement.node)) {
-    // TODO WEEK08: recursively lower blocks and both if branches, rewrite
-    // each for into scoped blocks and while, and preserve other statements.
-    throw std::logic_error("TODO WEEK08: implement recursive statement lowering");
+  if (auto *block = std::get_if<BlockStatement>(&statement.node)) {
+    // Keep the block node (and its scope); only its contents are visited.
+    lowerStatements(block->statements);
+    return statement;
+  }
+  if (auto *branch = std::get_if<IfStatement>(&statement.node)) {
+    // Visit both syntax branches; the condition is not evaluated here.
+    *branch->then_branch = lowerStatement(std::move(*branch->then_branch));
+    if (branch->else_branch) {
+      *branch->else_branch = lowerStatement(std::move(*branch->else_branch));
+    }
+    return statement;
+  }
+  if (auto *loop = std::get_if<ForStatement>(&statement.node)) {
+    const auto span = statement.span;
+    auto initializer = std::move(*loop->initializer);
+    auto condition = std::move(loop->condition);
+    auto update = std::move(*loop->update);
+    // Recursive call, so loops nested in the body are rewritten too.
+    auto body = lowerStatement(std::move(*loop->body));
+
+    // The body stays one whole block, so its names cannot capture the update.
+    std::vector<Statement> while_body;
+    while_body.push_back(std::move(body));
+    while_body.push_back(std::move(update));
+    auto synthetic_body =
+        Statement{span, BlockStatement{std::move(while_body)}};
+    auto while_statement = Statement{
+        span, WhileStatement{std::move(condition),
+                             std::make_unique<Statement>(
+                                 std::move(synthetic_body))}};
+
+    // The outer block limits the initializer variable to the loop.
+    std::vector<Statement> outer;
+    outer.push_back(std::move(initializer));
+    outer.push_back(std::move(while_statement));
+    return Statement{span, BlockStatement{std::move(outer)}};
   }
   return statement;
 }

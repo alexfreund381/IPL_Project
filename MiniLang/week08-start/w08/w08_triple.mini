@@ -1,0 +1,11 @@
+// Three nested loops plus an if inside the innermost body.
+// Every level must be lowered by the recursive body call.
+fun main() {
+  for (var a = 0; a < 2; a = a + 1) {
+    for (var b = 0; b < 2; b = b + 1) {
+      for (var c = 0; c < 2; c = c + 1) {
+        if (a == b and b == c) { print a * 100 + b * 10 + c; }
+      }
+    }
+  }
+}

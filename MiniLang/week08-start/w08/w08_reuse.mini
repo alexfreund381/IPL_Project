@@ -1,0 +1,6 @@
+// Two loops in a row can both declare i: each for becomes its own outer
+// block, so the first i is gone before the second var i is declared.
+fun main() {
+  for (var i = 0; i < 2; i = i + 1) { print i; }
+  for (var i = 5; i < 7; i = i + 1) { print i; }
+}

@@ -1,0 +1,8 @@
+// Rejected on purpose: the update cannot see a name declared in the body.
+// The update sits after the body block inside the while, not inside it.
+fun main() {
+  for (var i = 0; i < 3; i = i + step) {
+    var step = 1;
+    print i;
+  }
+}

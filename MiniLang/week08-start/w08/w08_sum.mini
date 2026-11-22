@@ -1,0 +1,10 @@
+// Sum 1..4 into an outer variable.
+// The loop counter i is local to the loop, but total is declared outside,
+// so the body can update it and it is still visible after the loop.
+fun main() {
+  var total = 0;
+  for (var i = 1; i < 5; i = i + 1) {
+    total = total + i;
+  }
+  print total;
+}
